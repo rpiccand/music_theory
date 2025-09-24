@@ -771,7 +771,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
       <div />
       <div
         className="justify-self-start text-left text-neutral-800 mt-1 tracking-wide relative"
-        style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '30ch' }}
+        style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: '24ch', maxWidth: '30ch' }}
       >
         {headerScaleSchemaPretty}
         {navMode === 'test' && hideAlterSchema && (
@@ -871,6 +871,16 @@ function StickyNote({ onClick }: { onClick: () => void }) {
               // Use global Y positions computed above
               const romanY = ROMAN_Y;
               const chordNamesY = MODE_NAME_Y;
+              // Octave adjustment to keep highest note at or below first ledger A5 (staffPos 10)
+              const chordAbsIndices = [0,2,4,6].map(o => tonicLetterRank + degree + o);
+              const chordStaffPosMax = Math.max(
+                ...chordAbsIndices.map(ai => {
+                  const lr = ai % 7;
+                  const oc = tonicStartOct + Math.floor(ai / 7);
+                  return staffPosFromLetterOct(lr, oc);
+                })
+              );
+              const chordOctAdj = chordStaffPosMax > 10 ? -1 : 0;
 
               return (
                 <g key={degree}>
@@ -883,11 +893,21 @@ function StickyNote({ onClick }: { onClick: () => void }) {
                         const xRight = X0 + (degree + 1) * measureWidth - pad;
                         const stepX = (xRight - xLeft) / 7; // 7 notes, centered between barlines
                         const modeFormulaTokens = MODE_DEGREE_FORMULAS[degree].split(' ');
+                        // Octave adjustment for modes: ensure the highest of the 7 notes is <= A5 (staffPos 10)
+                        const modeAbsIndices = Array.from({ length: 7 }, (_, st) => tonicLetterRank + degree + st);
+                        const modeStaffPosMax = Math.max(
+                          ...modeAbsIndices.map(ai => {
+                            const lr = ai % 7;
+                            const oc = tonicStartOct + Math.floor(ai / 7);
+                            return staffPosFromLetterOct(lr, oc);
+                          })
+                        );
+                        const modeOctAdj = modeStaffPosMax > 10 ? -1 : 0;
                         return Array.from({ length: 7 }, (_, step) => {
                           const cx = xLeft + (step + 0.5) * stepX; // center each of the 7 notes within its 1/7 slice
                           const absIndex = tonicLetterRank + degree + step; // diatonic absolute index from tonic
                           const letterRank = absIndex % 7;
-                          const oct = tonicStartOct + Math.floor(absIndex / 7);
+                          const oct = tonicStartOct + Math.floor(absIndex / 7) + modeOctAdj;
                           const staffPos = staffPosFromLetterOct(letterRank, oct);
                           const y = staffPosToY(staffPos, STAFF_BOTTOM_Y, STEP_PX);
                           const letter = RANK_TO_LETTER[letterRank] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
@@ -1007,29 +1027,29 @@ function StickyNote({ onClick }: { onClick: () => void }) {
                       </text>
                     </g>
                   )}
-                  {view===1 && chordDegrees.map((i)=>{
-                    const offset = [0,2,4,6][i];                  // 0, 2, 4, 6 pas diatoniques depuis la fondamentale
+                  {view===1 && chordDegrees.map((_, idx)=>{
+                    const offset = [0,2,4,6][idx];                  // 0, 2, 4, 6 pas diatoniques depuis la fondamentale
                     const absIndex = tonicLetterRank + degree + offset; // index diatonique absolu depuis la tonique
                     const letterRank = absIndex % 7;
-                    const oct = tonicStartOct + Math.floor(absIndex / 7);
+                    const oct = tonicStartOct + Math.floor(absIndex / 7) + chordOctAdj;
                     const staffPos = staffPosFromLetterOct(letterRank, oct);
                     const y = staffPosToY(staffPos, STAFF_BOTTOM_Y, STEP_PX);
                     const letter = RANK_TO_LETTER[letterRank] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
                     const acc = accidentalForLetterInKey(letter, currentKey.pc);
                     const accGlyph = acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
                     return (
-                      <motion.g key={i} initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} transition={{duration:0.25}}>
-                      {accGlyph && (
-                        <text
-                          x={accGlyph === '♯' ? xCenter - 14 * s : xCenter - 16 * s}
-                          y={y}
-                          fontSize={14 * s}
-                          fontFamily={MUSIC_FONT}
-                          dominantBaseline="middle"
-                        >
-                          {accGlyph}
-                        </text>
-                      )}
+                      <motion.g key={idx} initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} transition={{duration:0.25}}>
+                        {accGlyph && (
+                          <text
+                            x={accGlyph === '♯' ? xCenter - 14 * s : xCenter - 16 * s}
+                            y={y}
+                            fontSize={14 * s}
+                            fontFamily={MUSIC_FONT}
+                            dominantBaseline="middle"
+                          >
+                            {accGlyph}
+                          </text>
+                        )}
                         {noteheadWithLedger(xCenter, staffPos, s * 0.67, STAFF_BOTTOM_Y, STEP_PX)}
                       </motion.g>
                     );
