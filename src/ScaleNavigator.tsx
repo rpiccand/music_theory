@@ -757,7 +757,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
       <div className="justify-self-end text-neutral-800 mt-1 tracking-wide" style={{ fontSize: '3rem' }}>Altérations</div>
       <div className="text-neutral-800 mt-1 tracking-wide" style={{ fontSize: '3rem' }}>:</div>
       <div />
-      <div className="justify-self-start text-left text-neutral-800 mt-1 tracking-wide relative" style={{ fontSize: '3rem', overflow: 'hidden' }}>
+      <div className="justify-self-start text-left text-neutral-800 tracking-wide relative" style={{ fontSize: '3rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'  }}>
         {headerAccType === 'none' ? '—' : (
           <>
             <span>{headerAccStr}</span>
@@ -771,7 +771,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
       <div />
       <div
         className="justify-self-start text-left text-neutral-800 mt-1 tracking-wide relative"
-        style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: '24ch', maxWidth: '30ch' }}
+        style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: '24ch' }}
       >
         {headerScaleSchemaPretty}
         {navMode === 'test' && hideAlterSchema && (
