@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 
@@ -75,21 +75,6 @@ function majorKeySignatureFor(pc: number): { type: 'none'|'sharp'|'flat', count:
 const WHITE_PCS = new Set([0,2,4,5,7,9,11]);
 function isWhitePc(pc: number) { return WHITE_PCS.has(((pc%12)+12)%12); }
 function pcOfMidi(m: number) { return ((m % 12) + 12) % 12; }
-
-// Preferred staff positions (treble) for accidentals by letter (E4 pos=0 ... F5 pos=8)
-const TREBLE_POS_FOR_LETTER: Record<string, number> = {
-  C: 5, D: 6, E: 7, F: 8, G: 2, A: 3, B: 4,
-};
-
-const MODE_ALTERATIONS = [
-  "—",
-  "♭3, ♭7",
-  "♭2, ♭3, ♭6, ♭7",
-  "#4",
-  "♭7",
-  "♭3, ♭6, ♭7",
-  "♭2, ♭3, ♭5, ♭6, ♭7",
-];
 
 const SEVENTH_QUALITIES = ["Maj7", "m7", "m7", "Maj7", "7", "m7", "m7♭5"] as const;
 const ROMAN_NUMERALS = ["I","II","III","IV","V","VI","VII"];
@@ -357,11 +342,6 @@ function majorScaleMidis(keyPc: PitchClass): number[] {
   return DEGREE_SEMITONES_MAJOR.map(st=>tonicMidi+st);
 }
 
-// Helper to get y for accidental letter
-function yForAccidentalLetter(letter: 'A'|'B'|'C'|'D'|'E'|'F'|'G', STAFF_BOTTOM_Y: number, STEP_PX: number) {
-  const pos = TREBLE_POS_FOR_LETTER[letter];
-  return staffPosToY(pos, STAFF_BOTTOM_Y, STEP_PX);
-}
 
 type ViewMode = 0|1|2; // 0=Notes, 1=Tétrades (7e), 2=Modes
 const ScaleNavigator: React.FC = () => {
@@ -463,10 +443,7 @@ const ScaleNavigator: React.FC = () => {
   const TRAIL_NBSP = '\u00A0\u00A0\u00A0\u00A0\u00A0'; // ~5 spaces
   // Only the number, accidental glyph rendered separately
   const headerAccStr = sig.type === 'none' || sig.count === 0 ? '—' : String(headerAccCount);
-  // Schéma des 7 degrés (sans l’octave) : '.' pour blanche, '°' pour noire (no spaces)
-  const headerScaleSchema = scaleMidis
-    .map(m => (isWhitePc(pcOfMidi(m)) ? '.' : '°'))
-    .join('');
+  
   // Tétrade du I (notes + altérations selon armure), as tokens for JSX rendering
   type ChordTok = { base: string; acc: 'sharp'|'flat'|null };
   const chordLRsI = [0,2,4,6].map(o => (tonicLetterRank + o) % 7);
@@ -476,19 +453,7 @@ const ScaleNavigator: React.FC = () => {
     const acc  = accidentalForLetterInKey(letter, currentKey.pc);
     return { base, acc };
   });
-  const chordNamesINodes = chordTokensI.map((tok, idx) => {
-    const prev = chordTokensI[idx - 1];
-    const needsSpace = idx === 0 ? false : prev && prev.acc !== 'flat';
-    return (
-      <React.Fragment key={`tok-${idx}`}>
-        {needsSpace ? ' ' : ''}
-        <span>{tok.base}</span>
-        {tok.acc && (
-          <span style={{ fontFamily: MUSIC_FONT }}>{tok.acc === 'sharp' ? '♯' : '♭'}</span>
-        )}
-      </React.Fragment>
-    );
-  });
+
   // Smaller accidental size for header Tétrade value (so ♯/♭ don't overpower the text)
   const chordNamesINodesSmall = chordTokensI.map((tok, idx) => {
     const prev = chordTokensI[idx - 1];
@@ -660,7 +625,6 @@ function StickyNote({ onClick }: { onClick: () => void }) {
   const DEGREE_NUM_Y = STAFF_BOTTOM_Y + 36 * s; // chiffres 1..7 plus bas sous la portée
 
   // Second pass: compute left padding for the clef, then distribute remaining width across 7 measures
-  const staffHeight = 100;
   const leftPadding = leftEdge + 28 * s; // plus d'espace réservé à la clé de sol
   const measureWidth = Math.max(80, (containerWidth - leftPadding - rightMargin) / 7);
   const X0 = leftPadding;               // début de la première mesure
@@ -870,7 +834,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
             {[0,1,2,3,4].map(line=>(<line key={line} x1={leftEdge} x2={staffWidth-rightMargin} y1={STAFF_TOP_Y+line*LINE_SPACING} y2={STAFF_TOP_Y+line*LINE_SPACING} stroke="#333" strokeWidth={1}/>))}
             {Array.from({length:8}).map((_,i)=>(<line key={i} x1={X0+i*measureWidth} x2={X0+i*measureWidth} y1={STAFF_TOP_Y-5} y2={STAFF_BOTTOM_Y} stroke="#999" strokeWidth={i===0?2:1}/>))}
             <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} />
-            {scaleMidis.map((midi,degree)=>{
+            {scaleMidis.map((degree)=>{
               const xCenter = X0 + degree*measureWidth + measureWidth/2 + 10;
               if(view===0){
                 const letterRank = (tonicLetterRank + degree) % 7;
@@ -904,21 +868,10 @@ function StickyNote({ onClick }: { onClick: () => void }) {
                 );
               }
               const chordDegrees = buildSeventhChordIndices(degree);
-              // Build inline chord note names from root upward (e.g., do mi sol si)
-              const chordLetterRanks = [0,2,4,6].map(o => (tonicLetterRank + ((degree + o) % 7)) % 7);
-              const chordNamesInline = chordLetterRanks.map(lr => letterRankToNameFr(lr)).join(' ');
               // Use global Y positions computed above
               const romanY = ROMAN_Y;
               const chordNamesY = MODE_NAME_Y;
-              // Build 8-note mode note-name tokens for this degree (degree..degree+7)
-              const modeTokens = Array.from({ length: 8 }, (_, step) => {
-                const absIndex = tonicLetterRank + degree + step; // diatonic absolute index from tonic
-                const letterRank = absIndex % 7;
-                const base = letterRankToNameFr(letterRank);
-                const letter = RANK_TO_LETTER[letterRank] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
-                const acc = accidentalForLetterInKey(letter, currentKey.pc);
-                return { base, acc } as { base: string; acc: 'sharp'|'flat'|null };
-              });
+
               return (
                 <g key={degree}>
                   {/* Render mode notes on staff inside measure for view===2 */}
@@ -1054,7 +1007,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
                       </text>
                     </g>
                   )}
-                  {view===1 && chordDegrees.map((dg,i)=>{
+                  {view===1 && chordDegrees.map((i)=>{
                     const offset = [0,2,4,6][i];                  // 0, 2, 4, 6 pas diatoniques depuis la fondamentale
                     const absIndex = tonicLetterRank + degree + offset; // index diatonique absolu depuis la tonique
                     const letterRank = absIndex % 7;
