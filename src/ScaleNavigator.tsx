@@ -834,7 +834,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
             {[0,1,2,3,4].map(line=>(<line key={line} x1={leftEdge} x2={staffWidth-rightMargin} y1={STAFF_TOP_Y+line*LINE_SPACING} y2={STAFF_TOP_Y+line*LINE_SPACING} stroke="#333" strokeWidth={1}/>))}
             {Array.from({length:8}).map((_,i)=>(<line key={i} x1={X0+i*measureWidth} x2={X0+i*measureWidth} y1={STAFF_TOP_Y-5} y2={STAFF_BOTTOM_Y} stroke="#999" strokeWidth={i===0?2:1}/>))}
             <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} />
-            {scaleMidis.map((midi, degree)=>{
+            {scaleMidis.map((_, degree)=>{
               const xCenter = X0 + degree*measureWidth + measureWidth/2 + 10;
               if(view===0){
                 const letterRank = (tonicLetterRank + degree) % 7;
