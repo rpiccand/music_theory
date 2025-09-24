@@ -243,6 +243,9 @@ const COF_MIN_LABELS = ['Am','Em','Bm','F♯m','C♯m','G♯m','E♭m','B♭m','
 function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number; onSelect?: (pc:number)=>void }) {
   const w = size, h = size; const cx = w/2, cy = h/2;
   const step = (2*Math.PI)/12;
+  // Center the C sector at the very top (12 o'clock)
+  // We subtract half a step so that the middle of the C wedge is at -90° instead of its leading edge.
+  const startAngle = -Math.PI / 2 - step / 2; // 0° = East; -90° = North in SVG
   const rOuter = size*0.48, rInner = size*0.30, rHole = size*0.16;
   // current index on circle (C at 0, clockwise fifths)
   const idx = ((pc % 12) + 12) % 12; // pitch class
@@ -254,7 +257,7 @@ function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number;
          style={{ display: 'block' }}>
       {/* Outer ring (majors) */}
       {COF_PCS.map((_, i) => {
-        const a0 = -Math.PI/2 + i*step; // start at top (C)
+        const a0 = startAngle + i*step; // start at top (C)
         const a1 = a0 + step;
         const isHi = i === highlightIdxMajor;
         return (
@@ -273,7 +276,7 @@ function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number;
       })}
       {/* Inner ring (minors) */}
       {COF_PCS.map((_, i) => {
-        const a0 = -Math.PI/2 + i*step; const a1 = a0 + step;
+        const a0 = startAngle + i*step; const a1 = a0 + step;
         const isHi = i === highlightIdxMinor;
         return (
           <path
@@ -291,7 +294,7 @@ function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number;
       })}
       {/* Labels */}
       {COF_MAJ_LABELS.map((lab, i) => {
-        const ang = -Math.PI/2 + (i+0.5)*step;
+        const ang = startAngle + (i+0.5)*step;
         const x = cx + (rInner + (rOuter-rInner)/2) * Math.cos(ang);
         const y = cy + (rInner + (rOuter-rInner)/2) * Math.sin(ang);
         return (
@@ -311,7 +314,7 @@ function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number;
         );
       })}
       {COF_MIN_LABELS.map((lab, i) => {
-        const ang = -Math.PI/2 + (i+0.5)*step;
+        const ang = startAngle + (i+0.5)*step;
         const x = cx + (rHole + (rInner-rHole)/2) * Math.cos(ang);
         const y = cy + (rHole + (rInner-rHole)/2) * Math.sin(ang);
         return (
@@ -336,11 +339,128 @@ function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number;
 function buildSeventhChordIndices(rootDegree: number): number[] {
   return [0,2,4,6].map((o)=>(rootDegree+o)%7);
 }
+
 function majorScaleMidis(keyPc: PitchClass): number[] {
   const baseC4 = 60;
   const tonicMidi = baseC4 + ((keyPc+12)%12);
   return DEGREE_SEMITONES_MAJOR.map(st=>tonicMidi+st);
 }
+
+// --- Piano (2 octaves) ------------------------------------------------------
+const WHITE_KEYS = new Set([0,2,4,5,7,9,11]);
+function Piano({ highlightedPc }: { highlightedPc: number }) {
+  // Draw from C4 (60) for 24 semitones (to B5 inclusive)
+  const startMidi = 60; // C4
+  const endMidi = startMidi + 24; // 2 octaves
+  const keyWidth = 16;
+  const whiteKeyHeight = 64;
+  const blackKeyHeight = 40;
+  const corner = 3;
+
+  const keys: number[] = [];
+  for (let m = startMidi; m < endMidi; m++) keys.push(m);
+
+  const whitesSoFar = (idx: number) =>
+    keys.slice(0, idx).filter(k => WHITE_KEYS.has((k % 12 + 12) % 12)).length;
+  const totalWhite = keys.filter(k => WHITE_KEYS.has((k % 12 + 12) % 12)).length;
+  const svgWidth = keyWidth * totalWhite;
+
+  const pcEq = (a: number, b: number) => (((a % 12) + 12) % 12) === (((b % 12) + 12) % 12);
+
+  return (
+    <svg width={svgWidth} height={whiteKeyHeight + 14} aria-label="Clavier (2 octaves)" style={{ display: 'block' }}>
+      <defs>
+        {/* Subtle drop shadow for keys */}
+        <filter id="keyShadow" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1.4" floodColor="#000" floodOpacity="0.25" />
+        </filter>
+        {/* White key glossy gradient */}
+        <linearGradient id="whiteGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f9fafb" />
+          <stop offset="55%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e5e7eb" />
+        </linearGradient>
+        {/* Black key glossy gradient */}
+        <linearGradient id="blackGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#444" />
+          <stop offset="40%" stopColor="#111" />
+          <stop offset="100%" stopColor="#000" />
+        </linearGradient>
+        {/* Red highlight overlay */}
+        <linearGradient id="redHi" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#dc2626" />
+          <stop offset="100%" stopColor="#7f1d1d" />
+        </linearGradient>
+      </defs>
+
+      {/* Base board */}
+      <rect x={-6} y={whiteKeyHeight} width={svgWidth + 12} height={10} fill="#111" opacity="0.12" />
+
+      {/* White keys first (under) */}
+      {keys.map((m, i) => {
+        const pc = ((m % 12) + 12) % 12;
+        if (!WHITE_KEYS.has(pc)) return null;
+        const x = keyWidth * whitesSoFar(i);
+        const isTonic = pcEq(pc, highlightedPc);
+        return (
+          <g key={`w-${m}`} filter="url(#keyShadow)">
+            <rect x={x} y={0} width={keyWidth} height={whiteKeyHeight} rx={corner} ry={corner} fill="url(#whiteGrad)" stroke="#111" strokeOpacity="0.35" strokeWidth={0.8} />
+            {/* separator line */}
+            <line x1={x + keyWidth - 0.5} y1={0} x2={x + keyWidth - 0.5} y2={whiteKeyHeight} stroke="#000" strokeOpacity="0.08" />
+            {isTonic && (
+              <rect
+                x={x + 2}
+                y={2}
+                width={keyWidth - 4}
+                height={whiteKeyHeight - 10}
+                rx={corner - 1}
+                ry={corner - 1}
+                fill="url(#redHi)"
+                opacity="0.45"
+                stroke="#7f1d1d"
+                strokeWidth={1.2}
+                style={{ mixBlendMode: 'multiply' }}
+              />
+            )}
+          </g>
+        );
+      })}
+
+      {/* Black keys on top */}
+      {keys.map((m, i) => {
+        const pc = ((m % 12) + 12) % 12;
+        if (WHITE_KEYS.has(pc)) return null;
+        const x = keyWidth * (whitesSoFar(i) - 0.36);
+        const isTonic = pcEq(pc, highlightedPc);
+        return (
+          <g key={`b-${m}`} filter="url(#keyShadow)">
+            <rect x={x} y={0} width={keyWidth * 0.72} height={blackKeyHeight} rx={corner} ry={corner} fill="url(#blackGrad)" />
+            {isTonic && (
+              <rect
+                x={x + 1.5}
+                y={1.5}
+                width={keyWidth * 0.72 - 3}
+                height={blackKeyHeight - 6}
+                rx={corner - 1}
+                ry={corner - 1}
+                fill="url(#redHi)"
+                opacity="0.55"
+                stroke="#7f1d1d"
+                strokeWidth={1}
+                style={{ mixBlendMode: 'screen' }}
+              />
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// Fixed width for header keyboard (2 octaves = 14 white keys at 16px each)
+const PIANO_KEY_WIDTH = 16;
+const PIANO_WHITE_COUNT = 14;
+const PIANO_WIDTH = PIANO_KEY_WIDTH * PIANO_WHITE_COUNT; // 224px
 
 
 type ViewMode = 0|1|2; // 0=Notes, 1=Tétrades (7e), 2=Modes
@@ -658,7 +778,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
             style={{ fontSize: '1.07rem', marginLeft: '0.25ch' }}
           >
             <option value="diatonique">diatonique</option>
-            <option value="circle">circle of fifth</option>
+            <option value="circle">cycle de quintes</option>
             <option value="test">test (random)</option>
           </select>
         </div>
@@ -680,7 +800,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
           >
             ← : tonalité précédente (selon le mode ci-dessus)
           </div>
-          <div>… ou choisir dans le cercle des quintes</div>
+          <div>… ou choisir dans le cycles des quintes</div>
         </div>
         {/* Blank line before current view label */}
         <div aria-hidden="true" style={{ height: '1.2rem' }} />
@@ -744,13 +864,18 @@ function StickyNote({ onClick }: { onClick: () => void }) {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          gridColumn: '4 / 7', // span across value + spacer + right schema columns
+          gridColumn: '4 / 7',
+          position: 'relative',
+          paddingRight: `${PIANO_WIDTH + 16}px`
         }}
       >
         {(() => {
           const v = americanKeyNameMajor(currentKey.pc);
           return v.length ? v[0].toUpperCase() + v.slice(1) : v;
         })()}{TRAIL_NBSP}
+        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: PIANO_WIDTH }}>
+          <Piano highlightedPc={currentKey.pc} />
+        </div>
       </div>
 
       {/* Altérations */}
@@ -829,8 +954,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
         }}
       />
           <div className="relative" style={{ width: staffWidth, height: svgHeight, margin: '0 auto' }}>
-          <svg width="100%" height={svgHeight} viewBox={`0 0 ${staffWidth} ${svgHeight}`} preserveAspectRatio="xMidYMin meet">            
-            const leftPadding = leftEdge + 28 * s;
+          <svg width="100%" height={svgHeight} viewBox={`0 0 ${staffWidth} ${svgHeight}`} preserveAspectRatio="xMidYMin meet">
             {[0,1,2,3,4].map(line=>(<line key={line} x1={leftEdge} x2={staffWidth-rightMargin} y1={STAFF_TOP_Y+line*LINE_SPACING} y2={STAFF_TOP_Y+line*LINE_SPACING} stroke="#333" strokeWidth={1}/>))}
             {Array.from({length:8}).map((_,i)=>(<line key={i} x1={X0+i*measureWidth} x2={X0+i*measureWidth} y1={STAFF_TOP_Y-5} y2={STAFF_BOTTOM_Y} stroke="#999" strokeWidth={i===0?2:1}/>))}
             <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} />
