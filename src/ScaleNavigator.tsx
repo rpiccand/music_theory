@@ -1,201 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import {
+  KEYS, MODE_NAMES, MODE_DEGREE_FORMULAS,
+  SEVENTH_QUALITIES,
+  PC_TO_TONIC_LETTER_RANK, RANK_TO_LETTER,
+  americanKeyNameMajor, majorKeySignatureFor, isWhitePc, pcOfMidi, romanForDegree,
+  letterRankToNameFr, americanNoteForLetterRank, prettyQualityForDegree,
+  accidentalForLetterInKey, midiOctave, staffPosFromLetterOct, staffPosToY,
+  buildSeventhChordIndices, majorScaleMidis
+} from "./utils/music";
+import { noteheadWithLedger } from "./utils/drawing";
+import TrebleClef from "./components/TrebleClef";
+import Piano from "./components/Piano";
+import CircleOfFifths from "./components/CircleOfFifths";
+
 
 // --- Music theory helpers ---------------------------------------------------
-
-type PitchClass = 0|1|2|3|4|5|6|7|8|9|10|11;
-
-const KEYS: { name: string; pc: PitchClass }[] = [
-  { name: "Do", pc: 0 },
-  { name: "Ré♭ (Do#)", pc: 1 },
-  { name: "Ré", pc: 2 },
-  { name: "Mi♭ (Ré#)", pc: 3 },
-  { name: "Mi", pc: 4 },
-  { name: "Fa", pc: 5 },
-  { name: "Sol♭ (Fa#)", pc: 6 },
-  { name: "Sol", pc: 7 },
-  { name: "La♭ (Sol#)", pc: 8 },
-  { name: "La", pc: 9 },
-  { name: "Si♭ (La#)", pc: 10 },
-  { name: "Si", pc: 11 },
-];
-
-const AMERICAN_NAMES_FLAT = ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"] as const;
-function americanKeyNameMajor(pc: number): string {
-  return AMERICAN_NAMES_FLAT[((pc % 12) + 12) % 12];
-}
-
-const DEGREE_SEMITONES_MAJOR = [0, 2, 4, 5, 7, 9, 11];
-
-const MODE_NAMES = [
-  "Ionien (Majeur)",
-  "Dorien",
-  "Phrygien",
-  "Lydien",
-  "Mixolydien",
-  "Éolien (Mineur naturel)",
-  "Locrien",
-];
-
-const MODE_DEGREE_FORMULAS = [
-  "1 2 3 4 5 6 7",            // Ionien
-  "1 2 ♭3 4 5 6 ♭7",         // Dorien
-  "1 ♭2 ♭3 4 5 ♭6 ♭7",       // Phrygien
-  "1 2 3 #4 5 6 7",          // Lydien
-  "1 2 3 4 5 6 ♭7",          // Mixolydien
-  "1 2 ♭3 4 5 ♭6 ♭7",        // Éolien (mineur naturel)
-  "1 ♭2 ♭3 4 ♭5 ♭6 ♭7",      // Locrien
-];
-
-// Key signature mapping for MAJOR keys (prefer flats for enharmonic black keys as per labels)
-const SHARP_ORDER_LETTERS = ["F","C","G","D","A","E","B"] as const;
-const FLAT_ORDER_LETTERS  = ["B","E","A","D","G","C","F"] as const;
-
-function majorKeySignatureFor(pc: number): { type: 'none'|'sharp'|'flat', count: number } {
-  // Circle of fifths for MAJOR with enharmonic preference: use flats for 1 (Db) and 6 (Gb)
-  switch ((pc % 12 + 12) % 12) {
-    case 0:  return { type: 'none',  count: 0 }; // C
-    case 7:  return { type: 'sharp', count: 1 }; // G
-    case 2:  return { type: 'sharp', count: 2 }; // D
-    case 9:  return { type: 'sharp', count: 3 }; // A
-    case 4:  return { type: 'sharp', count: 4 }; // E
-    case 11: return { type: 'sharp', count: 5 }; // B
-    case 6:  return { type: 'flat',  count: 6 }; // prefer Gb over F# for our labels
-    case 5:  return { type: 'flat',  count: 1 }; // F
-    case 10: return { type: 'flat',  count: 2 }; // Bb
-    case 3:  return { type: 'flat',  count: 3 }; // Eb
-    case 8:  return { type: 'flat',  count: 4 }; // Ab
-    case 1:  return { type: 'flat',  count: 5 }; // Db (instead of C#)
-    default: return { type: 'none', count: 0 };
-  }
-}
-
-// Piano white/black membership by pitch class (C=0..B=11)
-const WHITE_PCS = new Set([0,2,4,5,7,9,11]);
-function isWhitePc(pc: number) { return WHITE_PCS.has(((pc%12)+12)%12); }
-function pcOfMidi(m: number) { return ((m % 12) + 12) % 12; }
-
-const SEVENTH_QUALITIES = ["Maj7", "m7", "m7", "Maj7", "7", "m7", "m7♭5"] as const;
-const ROMAN_NUMERALS = ["I","II","III","IV","V","VI","VII"];
-
-function romanForDegree(degree: number, quality: string) {
-  if (quality === "m7" || quality === "m7♭5") return ROMAN_NUMERALS[degree].toLowerCase();
-  return ROMAN_NUMERALS[degree];
-}
-
-
-const LETTER_RANK: Record<string, number> = { C:0, D:1, E:2, F:3, G:4, A:5, B:6 };
-const PC_TO_TONIC_LETTER_RANK: number[] = [0,1,1,2,2,3,4,4,5,5,6,6];
-const LETTER_TO_NAME_FR = ["do","ré","mi","fa","sol","la","si"]; // C,D,E,F,G,A,B
-const RANK_TO_LETTER = ["C","D","E","F","G","A","B"] as const;
-function letterRankToNameFr(letterRank: number): string {
-  return LETTER_TO_NAME_FR[letterRank % 7];
-}
-
-// --- American note + 7th quality helpers (for Tétrades/Modes tonic labels) ---
-function americanNoteForLetterRank(lr: number, keyPc: number): { base: string; acc: 'sharp'|'flat'|null } {
-  const letter = RANK_TO_LETTER[lr] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
-  const acc = accidentalForLetterInKey(letter, keyPc);
-  // American base letter is just the letter itself
-  return { base: letter, acc };
-}
-
-function prettyQualityForDegree(degree: number): string {
-  const q = SEVENTH_QUALITIES[degree];
-  switch (q) {
-    case 'm7': return 'min7';
-    case 'm7♭5': return 'min7♭5';
-    default: return q; // 'Maj7' or '7'
-  }
-}
-
-function accidentalForLetterInKey(letter: 'A'|'B'|'C'|'D'|'E'|'F'|'G', pc: number): 'sharp'|'flat'|null {
-  const sig = majorKeySignatureFor(pc);
-  if (sig.type === 'none' || sig.count === 0) return null;
-  if (sig.type === 'sharp') {
-    const idx = SHARP_ORDER_LETTERS.indexOf(letter as any);
-    return (idx > -1 && idx < sig.count) ? 'sharp' : null;
-  } else {
-    const idx = FLAT_ORDER_LETTERS.indexOf(letter as any);
-    return (idx > -1 && idx < sig.count) ? 'flat' : null;
-  }
-}
-function midiOctave(midi: number): number { return Math.floor(midi / 12) - 1; }
-const P_E4 = 7*4 + LETTER_RANK.E;
-function staffPosFromLetterOct(letterRank: number, octave: number): number {
-  return (7 * octave + letterRank) - P_E4;
-}
-function staffPosToY(pos: number, STAFF_BOTTOM_Y: number, STEP_PX: number): number {
-  return STAFF_BOTTOM_Y - pos * STEP_PX;
-}
-function ledgerLinePositionsForStaffPos(pos: number): number[] {
-  const lines: number[] = [];
-  if (pos < 0) for (let p = -2; p >= pos; p -= 2) lines.push(p);
-  else if (pos > 8) for (let p = 10; p <= pos; p += 2) lines.push(p);
-  return lines;
-}
-function noteheadWithLedger(
-  cx: number,
-  staffPos: number,
-  scale = 1,
-  STAFF_BOTTOM_Y: number,
-  STEP_PX: number,
-  noteFill?: string
-) {
-  const y = staffPosToY(staffPos, STAFF_BOTTOM_Y, STEP_PX);
-  const elems: React.ReactNode[] = [];
-  const ll = ledgerLinePositionsForStaffPos(staffPos);
-  const halfLen = 12 * scale;
-  for (let i = 0; i < ll.length; i++) {
-    const yLine = staffPosToY(ll[i], STAFF_BOTTOM_Y, STEP_PX);
-    elems.push(
-      <line
-        key={`ll-${i}`}
-        x1={cx - halfLen}
-        x2={cx + halfLen}
-        y1={yLine}
-        y2={yLine}
-        stroke="#111"
-        strokeWidth={1}
-      />
-    );
-  }
-  const rx = 6 * scale;
-  const ry = 4 * scale;
-  elems.push(
-    <ellipse
-      key="nh"
-      cx={cx}
-      cy={y}
-      rx={rx}
-      ry={ry}
-      transform={`rotate(-15 ${cx} ${y})`}
-      {...(noteFill ? { fill: noteFill } : {})}
-    />
-  );
-  return elems;
-}
-function TrebleClef({ x, STAFF_TOP_Y, LINE_SPACING }: { x:number; STAFF_TOP_Y:number; LINE_SPACING:number }) {
-  // We want the clef to span ~6 staff spacings (slightly taller than the 5 lines)
-  const targetH = LINE_SPACING * 6;
-  // Empirical multiplier so the glyph visually matches the target height across typical fonts
-  const fontSize = targetH * 1.15;
-  // Place the baseline near the bottom line (E line) and nudge up for better fit
-  const bottomLineY = STAFF_TOP_Y + 4 * LINE_SPACING;
-  const baselineY = bottomLineY - LINE_SPACING * 0.05; // lowered a bit more
-  return (
-    <text
-      x={x}
-      y={baselineY}
-      fontSize={fontSize}
-      fontFamily="'Noto Music','Bravura Text','Bravura','Petaluma','Musica','Segoe UI Symbol', serif"
-      dominantBaseline="alphabetic"
-    >
-      {"\uD834\uDD1E" /* Unicode G clef 𝄞 */}
-    </text>
-  );
-}
 
 // --- Circle of Fifths overlay via portal ---
 function CircleOverlay({ pc, onSelect, size=260, top=16 }: { pc:number; onSelect:(pc:number)=>void; size?:number; top?:number }) {
@@ -218,129 +39,12 @@ function CircleOverlay({ pc, onSelect, size=260, top=16 }: { pc:number; onSelect
   );
   return createPortal(node, document.body);
 }
-// --- Circle of Fifths SVG helper ---
-function sectorPath(cx:number, cy:number, rInner:number, rOuter:number, a0:number, a1:number) {
-  // angles in radians; draw clockwise
-  const x0o = cx + rOuter * Math.cos(a0), y0o = cy + rOuter * Math.sin(a0);
-  const x1o = cx + rOuter * Math.cos(a1), y1o = cy + rOuter * Math.sin(a1);
-  const x1i = cx + rInner * Math.cos(a1), y1i = cy + rInner * Math.sin(a1);
-  const x0i = cx + rInner * Math.cos(a0), y0i = cy + rInner * Math.sin(a0);
-  const largeArc = (a1 - a0) % (2*Math.PI) > Math.PI ? 1 : 0;
-  return [
-    `M ${x0o} ${y0o}`,
-    `A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x1o} ${y1o}`,
-    `L ${x1i} ${y1i}`,
-    `A ${rInner} ${rInner} 0 ${largeArc} 0 ${x0i} ${y0i}`,
-    'Z',
-  ].join(' ');
-}
 
-const COF_PCS: number[] = [0,7,2,9,4,11,6,1,8,3,10,5]; // C, G, D, A, E, B, Gb, Db, Ab, Eb, Bb, F
-const COF_MAJ_LABELS = ['C','G','D','A','E','B','G♭','D♭','A♭','E♭','B♭','F'];
-// Relative minors for each major above (aligned indices)
-const COF_MIN_LABELS = ['Am','Em','Bm','F♯m','C♯m','G♯m','E♭m','B♭m','Fm','Cm','Gm','Dm'];
-
-function CircleOfFifths({ pc, size=220, onSelect }: { pc: number; size?: number; onSelect?: (pc:number)=>void }) {
-  const w = size, h = size; const cx = w/2, cy = h/2;
-  const step = (2*Math.PI)/12;
-  const rOuter = size*0.48, rInner = size*0.30, rHole = size*0.16;
-  // current index on circle (C at 0, clockwise fifths)
-  const idx = ((pc % 12) + 12) % 12; // pitch class
-  const outerIdx = (idx * 7) % 12;   // map to circle index
-  const highlightIdxMajor = outerIdx;
-  const highlightIdxMinor = outerIdx; // aligned relative minor wedge beneath
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}
-         style={{ display: 'block' }}>
-      {/* Outer ring (majors) */}
-      {COF_PCS.map((_, i) => {
-        const a0 = -Math.PI/2 + i*step; // start at top (C)
-        const a1 = a0 + step;
-        const isHi = i === highlightIdxMajor;
-        return (
-          <path
-            key={`maj-${i}`}
-            d={sectorPath(cx,cy,rInner,rOuter,a0,a1)}
-            fill={isHi ? '#fde68a' : '#e5e7eb'}
-            stroke="#111"
-            strokeWidth={1}
-            style={{ cursor: onSelect ? 'pointer' : 'default' }}
-            onClick={() => onSelect && onSelect(COF_PCS[i])}
-            role="button"
-            aria-label={`Select ${COF_MAJ_LABELS[i]} major`}
-          />
-        );
-      })}
-      {/* Inner ring (minors) */}
-      {COF_PCS.map((_, i) => {
-        const a0 = -Math.PI/2 + i*step; const a1 = a0 + step;
-        const isHi = i === highlightIdxMinor;
-        return (
-          <path
-            key={`min-${i}`}
-            d={sectorPath(cx,cy,rHole,rInner,a0,a1)}
-            fill={isHi ? '#fde68a' : '#ffffff'}
-            stroke="#111"
-            strokeWidth={1}
-            style={{ cursor: onSelect ? 'pointer' : 'default' }}
-            onClick={() => onSelect && onSelect(COF_PCS[i])}
-            role="button"
-            aria-label={`Select ${COF_MIN_LABELS[i]} (relative of ${COF_MAJ_LABELS[i]})`}
-          />
-        );
-      })}
-      {/* Labels */}
-      {COF_MAJ_LABELS.map((lab, i) => {
-        const ang = -Math.PI/2 + (i+0.5)*step;
-        const x = cx + (rInner + (rOuter-rInner)/2) * Math.cos(ang);
-        const y = cy + (rInner + (rOuter-rInner)/2) * Math.sin(ang);
-        return (
-          <text
-            key={`labM-${i}`}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize={size*0.09}
-            fontFamily="'Noto Music','Noto Sans Symbols2','Bravura Text','Bravura','Segoe UI Symbol','Arial',sans-serif"
-            style={{ cursor: onSelect ? 'pointer' : 'default' }}
-            onClick={() => onSelect && onSelect(COF_PCS[i])}
-          >
-            {lab}
-          </text>
-        );
-      })}
-      {COF_MIN_LABELS.map((lab, i) => {
-        const ang = -Math.PI/2 + (i+0.5)*step;
-        const x = cx + (rHole + (rInner-rHole)/2) * Math.cos(ang);
-        const y = cy + (rHole + (rInner-rHole)/2) * Math.sin(ang);
-        return (
-          <text
-            key={`labm-${i}`}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize={size*0.07}
-            fontFamily="'Noto Music','Noto Sans Symbols2','Bravura Text','Bravura','Segoe UI Symbol','Arial',sans-serif"
-            style={{ cursor: onSelect ? 'pointer' : 'default' }}
-            onClick={() => onSelect && onSelect(COF_PCS[i])}
-          >
-            {lab}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-function buildSeventhChordIndices(rootDegree: number): number[] {
-  return [0,2,4,6].map((o)=>(rootDegree+o)%7);
-}
-function majorScaleMidis(keyPc: PitchClass): number[] {
-  const baseC4 = 60;
-  const tonicMidi = baseC4 + ((keyPc+12)%12);
-  return DEGREE_SEMITONES_MAJOR.map(st=>tonicMidi+st);
-}
+// --- Piano (2 octaves) ------------------------------------------------------
+// Fixed width for header keyboard (2 octaves = 14 white keys at 16px each)
+const PIANO_KEY_WIDTH = 16;
+const PIANO_WHITE_COUNT = 14;
+const PIANO_WIDTH = PIANO_KEY_WIDTH * PIANO_WHITE_COUNT; // 224px
 
 
 type ViewMode = 0|1|2; // 0=Notes, 1=Tétrades (7e), 2=Modes
@@ -361,8 +65,9 @@ const ScaleNavigator: React.FC = () => {
 
   const [keyIndex, setKeyIndex] = useState<number>(0);
   const [view,setView] = useState<ViewMode>(0);
-  const [navMode, setNavMode] = useState<'diatonique' | 'circle' | 'test'>('diatonique');
-  const [recentTest, setRecentTest] = useState<number[]>([]); // last visited keys in test mode
+  const [navMode, setNavMode] = useState<'diatonique' | 'circle' | 'random'>('diatonique');
+  const [coverEnabled, setCoverEnabled] = useState<boolean>(false);
+  const [recentRandom, setRecentRandom] = useState<number[]>([]); // last visited keys in random mode
   const [hideAlter, setHideAlter] = useState<boolean>(false);
   const [hideTetrade, setHideTetrade] = useState<boolean>(false);
   const [hideAlterSchema, setHideAlterSchema] = useState(false);
@@ -373,23 +78,25 @@ const ScaleNavigator: React.FC = () => {
     2: Array(7).fill(false),
   });
 
+  const navSelectRef = React.useRef<HTMLSelectElement>(null);
+
   // Click helpers to mimic arrow keys
   const goRight = () => {
     setKeyIndex(i => {
       if (navMode === 'diatonique') return (i + 1) % 12;
       if (navMode === 'circle')     return (i + 7) % 12; // perfect fifth up
-      // test: choose a key not in the recent window (8) and not current
-      const forbidden = new Set<number>([i, ...recentTest]);
+      // random: choose a key not in the recent window (8) and not current
+      const forbidden = new Set<number>([i, ...recentRandom]);
       let candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => !forbidden.has(k));
       if (candidates.length === 0) {
         candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => k !== i);
       }
       const r = candidates[Math.floor(Math.random() * candidates.length)];
-      setRecentTest(prev => {
+      setRecentRandom(prev => {
         const next = [i, ...prev];
         return next.slice(0, 8);
       });
-      if (navMode === 'test') {
+      if (coverEnabled) {
         setHideAlter(true);
         setHideTetrade(true);
         setHideAlterSchema(true);
@@ -404,17 +111,17 @@ const ScaleNavigator: React.FC = () => {
     setKeyIndex(i => {
       if (navMode === 'diatonique') return (i + 11) % 12; // -1 mod 12
       if (navMode === 'circle')     return (i + 5) % 12;  // perfect fifth down (i-7 ≡ i+5)
-      const forbidden = new Set<number>([i, ...recentTest]);
+      const forbidden = new Set<number>([i, ...recentRandom]);
       let candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => !forbidden.has(k));
       if (candidates.length === 0) {
         candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => k !== i);
       }
       const r = candidates[Math.floor(Math.random() * candidates.length)];
-      setRecentTest(prev => {
+      setRecentRandom(prev => {
         const next = [i, ...prev];
         return next.slice(0, 8);
       });
-      if (navMode === 'test') {
+      if (coverEnabled) {
         setHideAlter(true);
         setHideTetrade(true);
         setHideAlterSchema(true);
@@ -496,88 +203,47 @@ const ScaleNavigator: React.FC = () => {
 
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
-      if (e.key === "ArrowRight") {
-        setKeyIndex(i => {
-          if (navMode === 'diatonique') return (i + 1) % 12;
-          if (navMode === 'circle')     return (i + 7) % 12; // perfect fifth up
-          // test: choose a key not in the recent window (8) and not current
-          const forbidden = new Set<number>([i, ...recentTest]);
-          let candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => !forbidden.has(k));
-          if (candidates.length === 0) {
-            // if all excluded (can happen after many unique steps), relax by dropping oldest
-            candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => k !== i);
-          }
-          const r = candidates[Math.floor(Math.random() * candidates.length)];
-          // update recency buffer with current index i
-          setRecentTest(prev => {
-            const next = [i, ...prev];
-            return next.slice(0, 8);
-          });
-          if (navMode === 'test') {
-            setHideAlter(true);
-            setHideTetrade(true);
-            setHideAlterSchema(true);
-            setHideTetradeSchema(true);
-            setMeasureCoversByView({ 0: Array(7).fill(true), 1: Array(7).fill(true), 2: Array(7).fill(true) });
-          }
-          return r;
-        });
-      }
-      if (e.key === "ArrowLeft") {
-        setKeyIndex(i => {
-          if (navMode === 'diatonique') return (i + 11) % 12; // -1 mod 12
-          if (navMode === 'circle')     return (i + 5) % 12;  // perfect fifth down (i-7 ≡ i+5)
-          // test: choose a key not in the recent window (8) and not current
-          const forbidden = new Set<number>([i, ...recentTest]);
-          let candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => !forbidden.has(k));
-          if (candidates.length === 0) {
-            candidates = Array.from({ length: 12 }, (_, k) => k).filter(k => k !== i);
-          }
-          const r = candidates[Math.floor(Math.random() * candidates.length)];
-          setRecentTest(prev => {
-            const next = [i, ...prev];
-            return next.slice(0, 8);
-          });
-          if (navMode === 'test') {
-            setHideAlter(true);
-            setHideTetrade(true);
-            setHideAlterSchema(true);
-            setHideTetradeSchema(true);
-            setMeasureCoversByView({ 0: Array(7).fill(true), 1: Array(7).fill(true), 2: Array(7).fill(true) });
-          }
-          return r;
-        });
-      }
-      if (e.key === "ArrowUp")   setView(v => ((v + 1) % 3) as ViewMode);
-      if (e.key === "ArrowDown") setView(v => ((v + 2) % 3) as ViewMode); // cycle backwards
+      if (e.key === "ArrowRight") { goRight(); }
+      else if (e.key === "ArrowLeft") { goLeft(); }
+      else if (e.key === "ArrowUp") { viewNext(); }
+      else if (e.key === "ArrowDown") { viewPrev(); }
     };
     window.addEventListener("keydown",onKey);
     return()=>window.removeEventListener("keydown",onKey);
-  },[navMode, recentTest]);
+  },[navMode, recentRandom, coverEnabled]);
 
     // Reset per-measure sticky notes when the key changes (and sync to navMode)
     useEffect(() => {
-      if (navMode === 'test') {
+      if (coverEnabled) {
         setMeasureCoversByView({ 0: Array(7).fill(true), 1: Array(7).fill(true), 2: Array(7).fill(true) });
       } else {
         setMeasureCoversByView({ 0: Array(7).fill(false), 1: Array(7).fill(false), 2: Array(7).fill(false) });
       }
-    }, [keyIndex, navMode]);
+    }, [keyIndex, coverEnabled]);
 
-  useEffect(() => {
-    setRecentTest([]);
-    if (navMode === 'test') {
+    useEffect(() => {
+      if (!coverEnabled) return;
+      // Re-cover header sticky notes on key change when cover mode is enabled
       setHideAlter(true);
       setHideTetrade(true);
       setHideAlterSchema(true);
       setHideTetradeSchema(true);
-    } else {
-      setHideAlter(false);
-      setHideTetrade(false);
-      setHideAlterSchema(false);
-      setHideTetradeSchema(false);
-    }
-  }, [navMode]);
+    }, [keyIndex, coverEnabled]);
+
+    useEffect(() => {
+      setRecentRandom([]);
+      if (coverEnabled) {
+        setHideAlter(true);
+        setHideTetrade(true);
+        setHideAlterSchema(true);
+        setHideTetradeSchema(true);
+      } else {
+        setHideAlter(false);
+        setHideTetrade(false);
+        setHideAlterSchema(false);
+        setHideTetradeSchema(false);
+      }
+    }, [navMode, coverEnabled]);
 // --- StickyNote overlay component ---
 function StickyNote({ onClick }: { onClick: () => void }) {
   return (
@@ -649,18 +315,51 @@ function StickyNote({ onClick }: { onClick: () => void }) {
             Navigation
           </label>
           <select
+            ref={navSelectRef}
             value={navMode}
             onChange={(e) => {
-              setNavMode(e.target.value as 'diatonique' | 'circle' | 'test');
-              (e.target as HTMLSelectElement).blur();
+              // apply the new mode
+              setNavMode(e.target.value as 'diatonique' | 'circle' | 'random');
+
+              // blur on the next frame so the dropdown loses focus
+              // (works across Chrome/Safari/Firefox)
+              requestAnimationFrame(() => navSelectRef.current?.blur());
             }}
+            // stop arrow keys from hijacking while focused (extra safety)
+            onKeyDown={(ev) => {
+              if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+                ev.preventDefault();
+                ev.stopPropagation();
+              }
+            }}
+            // also stop click bubbling so our global key handler stays clean
+            onClick={(ev) => ev.stopPropagation()}
             className="border border-neutral-300 rounded px-1 py-1 bg-white text-neutral-900"
             style={{ fontSize: '1.07rem', marginLeft: '0.25ch' }}
           >
             <option value="diatonique">diatonique</option>
-            <option value="circle">circle of fifth</option>
-            <option value="test">test (random)</option>
+            <option value="circle">cycle de quintes</option>
+            <option value="random">random</option>
           </select>
+          <label className="ml-3 inline-flex items-center gap-2 text-neutral-700" style={{ fontSize: '1rem' }}>
+          <input
+            type="checkbox"
+            checked={coverEnabled}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              setCoverEnabled(enabled);
+              // synchronise les caches du header
+              setHideAlter(enabled);
+              setHideTetrade(enabled);
+              setHideAlterSchema(enabled);
+              setHideTetradeSchema(enabled);
+              // synchronise les caches par mesure pour les 3 vues
+              setMeasureCoversByView({ 0: Array(7).fill(enabled), 1: Array(7).fill(enabled), 2: Array(7).fill(enabled) });
+            }}
+            className="align-middle"
+          />
+          <span>post-it</span>
+        </label>
         </div>
         {/* Horizontal arrows legend */}
         <div className="mt-2 text-neutral-600" style={{ fontSize: '1.2rem', lineHeight: 1.2, textAlign: 'left' }}>
@@ -680,7 +379,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
           >
             ← : tonalité précédente (selon le mode ci-dessus)
           </div>
-          <div>… ou choisir dans le cercle des quintes</div>
+          <div>… ou choisir dans le cycles des quintes</div>
         </div>
         {/* Blank line before current view label */}
         <div aria-hidden="true" style={{ height: '1.2rem' }} />
@@ -744,13 +443,18 @@ function StickyNote({ onClick }: { onClick: () => void }) {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          gridColumn: '4 / 7', // span across value + spacer + right schema columns
+          gridColumn: '4 / 7',
+          position: 'relative',
+          paddingRight: `${PIANO_WIDTH + 16}px`
         }}
       >
         {(() => {
           const v = americanKeyNameMajor(currentKey.pc);
           return v.length ? v[0].toUpperCase() + v.slice(1) : v;
         })()}{TRAIL_NBSP}
+        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: PIANO_WIDTH }}>
+          <Piano highlightedPc={currentKey.pc} />
+        </div>
       </div>
 
       {/* Altérations */}
@@ -764,7 +468,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
             <span style={{ fontFamily: MUSIC_FONT, fontSize: '2rem' }}>{headerAccType === 'sharp' ? '♯' : '♭'}</span>
           </>
         )}
-        {navMode === 'test' && hideAlter && (
+        {coverEnabled && hideAlter && (
           <StickyNote onClick={() => setHideAlter(false)} />
         )}
       </div>
@@ -774,7 +478,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
         style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: '24ch' }}
       >
         {headerScaleSchemaPretty}
-        {navMode === 'test' && hideAlterSchema && (
+        {coverEnabled && hideAlterSchema && (
           <StickyNote onClick={() => setHideAlterSchema(false)} />
         )}
       </div>
@@ -786,7 +490,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
       <div className="justify-self-start text-left text-neutral-800 tracking-wide relative" style={{ fontSize: '3rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {chordNamesINodesSmall}
         <span>{TRAIL_NBSP}</span>
-        {navMode === 'test' && hideTetrade && (
+        {coverEnabled && hideTetrade && (
           <StickyNote onClick={() => setHideTetrade(false)} />
         )}
       </div>
@@ -802,7 +506,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
         }}
       >
         {headerChordSchema}
-        {navMode === 'test' && hideTetradeSchema && (
+        {coverEnabled && hideTetradeSchema && (
           <StickyNote onClick={() => setHideTetradeSchema(false)} />
         )}
       </div>
@@ -819,7 +523,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
         onSelect={(pc) => {
           const idx = KEYS.findIndex(k => ((k.pc % 12) + 12) % 12 === pc);
           if (idx >= 0) setKeyIndex(idx);
-          if (navMode === 'test') {
+          if (coverEnabled) {
             setHideAlter(true);
             setHideTetrade(true);
             setHideAlterSchema(true);
@@ -829,8 +533,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
         }}
       />
           <div className="relative" style={{ width: staffWidth, height: svgHeight, margin: '0 auto' }}>
-          <svg width="100%" height={svgHeight} viewBox={`0 0 ${staffWidth} ${svgHeight}`} preserveAspectRatio="xMidYMin meet">            
-            const leftPadding = leftEdge + 28 * s;
+          <svg width="100%" height={svgHeight} viewBox={`0 0 ${staffWidth} ${svgHeight}`} preserveAspectRatio="xMidYMin meet">
             {[0,1,2,3,4].map(line=>(<line key={line} x1={leftEdge} x2={staffWidth-rightMargin} y1={STAFF_TOP_Y+line*LINE_SPACING} y2={STAFF_TOP_Y+line*LINE_SPACING} stroke="#333" strokeWidth={1}/>))}
             {Array.from({length:8}).map((_,i)=>(<line key={i} x1={X0+i*measureWidth} x2={X0+i*measureWidth} y1={STAFF_TOP_Y-5} y2={STAFF_BOTTOM_Y} stroke="#999" strokeWidth={i===0?2:1}/>))}
             <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} />
@@ -1059,7 +762,7 @@ function StickyNote({ onClick }: { onClick: () => void }) {
               );
             })}
           </svg>
-            {navMode === 'test' && (measureCoversByView[view] ?? []).map((covered, i) => {
+            {coverEnabled && (measureCoversByView[view] ?? []).map((covered, i) => {
               if (!covered) return null;
             const x = X0 + i * measureWidth;
             const yTop = Math.max(0, STAFF_TOP_Y - 10 * s);
