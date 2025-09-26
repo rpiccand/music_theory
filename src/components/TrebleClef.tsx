@@ -4,13 +4,14 @@ type TrebleClefProps = {
   x: number;
   STAFF_TOP_Y: number;
   LINE_SPACING: number;
+  scale?: number; // Facteur d'échelle optionnel
 };
 
-const TrebleClef: React.FC<TrebleClefProps> = ({ x, STAFF_TOP_Y, LINE_SPACING }) => {
+const TrebleClef: React.FC<TrebleClefProps> = ({ x, STAFF_TOP_Y, LINE_SPACING, scale = 1 }) => {
   // We want the clef to span ~6 staff spacings (slightly taller than the 5 lines)
   const targetH = LINE_SPACING * 6;
   // Empirical multiplier so the glyph visually matches the target height across typical fonts
-  const fontSize = targetH * 1.15;
+  const fontSize = targetH * 1.15 * scale;
   // Place the baseline near the bottom line (E line) and nudge up for better fit
   const bottomLineY = STAFF_TOP_Y + 4 * LINE_SPACING;
   const baselineY = bottomLineY - LINE_SPACING * 0.05; // lowered a bit more
@@ -26,5 +27,5 @@ const TrebleClef: React.FC<TrebleClefProps> = ({ x, STAFF_TOP_Y, LINE_SPACING })
     </text>
   );
 };
-
+ 
 export default TrebleClef;
