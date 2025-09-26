@@ -27,6 +27,12 @@ export default function NavigationControls({
 }: NavigationControlsProps) {
   const navSelectRef = React.useRef<HTMLSelectElement>(null);
 
+  // Calculer les vues suivante et précédente
+  const nextView = (currentView + 1) % 3;
+  const prevView = (currentView - 1 + 3) % 3;
+  const nextViewName = VIEW_MODE_NAMES[nextView as keyof typeof VIEW_MODE_NAMES];
+  const prevViewName = VIEW_MODE_NAMES[prevView as keyof typeof VIEW_MODE_NAMES];
+
   return (
     <div className="absolute top-6 left-6 z-10">
       <div className="flex items-center gap-0">
@@ -114,7 +120,7 @@ export default function NavigationControls({
           className="transition-colors hover:text-neutral-900 hover:underline"
           style={{ cursor: 'pointer', userSelect: 'none' }}
         >
-          ↑ : vue suivante
+          ↑ : vue "{nextViewName}"
         </div>
         <div
           onClick={(e) => {
@@ -126,7 +132,7 @@ export default function NavigationControls({
           className="transition-colors hover:text-neutral-900 hover:underline"
           style={{ cursor: 'pointer', userSelect: 'none' }}
         >
-          ↓ : vue précédente
+          ↓ : vue "{prevViewName}"
         </div>
       </div>
     </div>

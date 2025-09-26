@@ -16,3 +16,7 @@ export const NAVIGATION_LABELS = {
   circle: 'cycle de quintes',
   random: 'random'
 } as const;
+
+// Staff drawing constants
+export const LINE_SPACING = 10;
+export const X0 = 80;

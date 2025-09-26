@@ -157,7 +157,7 @@ export default function HeaderInfo({
             style={{
               fontSize: '3rem',
               whiteSpace: 'nowrap',
-              minWidth: '8ch',
+              minWidth: '12ch',
               overflow: 'hidden',
               minHeight: '4.5rem'
             }}

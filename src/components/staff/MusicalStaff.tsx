@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import TrebleClef from '../TrebleClef';
 import StickyNote from '../ui/StickyNote';
+import CurrentKeyModesStaff from './CurrentKeyModesStaff';
 import type { ViewMode } from '../../types';
 import {
   KEYS, MODE_NAMES, MODE_DEGREE_FORMULAS, SEVENTH_QUALITIES,
@@ -60,8 +61,15 @@ export default function MusicalStaff({
   const ROMAN_Y = STAFF_BOTTOM_Y + 72 * s;
   const MODE_NAME_Y = ROMAN_Y + 28 * s;
   const MODE_FORMULA_Y = MODE_NAME_Y + 22 * s;
+
+  // Additional staff for modes view (current key in each mode)
+  const SECOND_STAFF_TOP_Y = MODE_FORMULA_Y + 40 * s;
+  const SECOND_STAFF_BOTTOM_Y = SECOND_STAFF_TOP_Y + 4 * LINE_SPACING;
+
   // Always use the maximum possible height to prevent layout shifts
-  const contentBottomY = Math.max(MODE_FORMULA_Y, DEGREE_NUM_Y, ROMAN_Y + 34 * s);
+  const contentBottomY = view === 2
+    ? Math.max(SECOND_STAFF_BOTTOM_Y + 40 * s, DEGREE_NUM_Y, ROMAN_Y + 34 * s)
+    : Math.max(MODE_FORMULA_Y, DEGREE_NUM_Y, ROMAN_Y + 34 * s);
   const svgHeight = Math.ceil(contentBottomY + 24);
 
   return (
@@ -98,7 +106,7 @@ export default function MusicalStaff({
           />
         ))}
 
-        <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} />
+        <TrebleClef x={26} STAFF_TOP_Y={STAFF_TOP_Y} LINE_SPACING={LINE_SPACING} scale={1.3} />
 
         {/* Scale degrees */}
         {scaleMidis.map((_, degree) => {
@@ -143,6 +151,23 @@ export default function MusicalStaff({
             />
           );
         })}
+
+        {/* Additional staff for modes view - showing current key in each mode */}
+        {view === 2 && (
+          <CurrentKeyModesStaff
+            staffWidth={staffWidth - leftEdge - rightMargin}
+            measureWidth={measureWidth}
+            currentKeyPc={currentKey.pc}
+            modes={['ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian']}
+            yTop={SECOND_STAFF_TOP_Y}
+            X0={X0}
+            tonicLetterRank={tonicLetterRank}
+            tonicStartOct={tonicStartOct}
+            STEP_PX={STEP_PX}
+            s={s}
+            fontSize={Math.max(8, 10 * s)}
+          />
+        )}
       </svg>
 
       {/* Sticky note covers */}
@@ -322,6 +347,8 @@ function ChordOrModeView({
           currentKeyPc={currentKeyPc}
           MODE_NAME_Y={MODE_NAME_Y}
           s={s}
+          X0={X0}
+          measureWidth={measureWidth}
         />
       )}
 
@@ -485,7 +512,9 @@ function ModeLabels({
   tonicLetterRank,
   currentKeyPc,
   MODE_NAME_Y,
-  s
+  s,
+  X0,
+  measureWidth
 }: {
   degree: number;
   xCenter: number;
@@ -493,6 +522,8 @@ function ModeLabels({
   currentKeyPc: number;
   MODE_NAME_Y: number;
   s: number;
+  X0: number;
+  measureWidth: number;
 }) {
   const lr = (tonicLetterRank + degree) % 7;
   const note = americanNoteForLetterRank(lr, currentKeyPc);
@@ -528,26 +559,29 @@ function ModeLabels({
         {modeBase}
       </text>
 
-      {/* Mode formula */}
-      <text
-        x={xCenter}
-        y={MODE_NAME_Y + 22 * s}
-        fontSize={10 * s}
-        textAnchor="middle"
-      >
-        {tokens.map((t, i) => {
-          const isAcc = t.includes('♭') || t.includes('#');
-          return (
-            <tspan
-              key={`tok-${i}`}
-              fill={isAcc ? '#b91c1c' : '#374151'}
-              fontWeight={isAcc ? 700 : 400}
-            >
-              {t}{i < tokens.length - 1 ? ' ' : ''}
-            </tspan>
-          );
-        })}
-      </text>
+      {/* Mode formula - aligné avec les notes */}
+      {tokens.map((t, i) => {
+        const isAcc = t.includes('♭') || t.includes('#');
+        const pad = 6 * s;
+        const xLeft = X0 + degree * measureWidth + pad;
+        const xRight = X0 + (degree + 1) * measureWidth - pad;
+        const stepX = (xRight - xLeft) / 7;
+        const tokenX = xLeft + (i + 0.5) * stepX;
+
+        return (
+          <text
+            key={`tok-${i}`}
+            x={tokenX}
+            y={MODE_NAME_Y + 22 * s}
+            fontSize={10 * s}
+            textAnchor="middle"
+            fill={isAcc ? '#b91c1c' : '#374151'}
+            fontWeight={isAcc ? 700 : 400}
+          >
+            {t}
+          </text>
+        );
+      })}
     </g>
   );
 }
