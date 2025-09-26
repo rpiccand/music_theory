@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import TrebleClef from '../TrebleClef';
+import MeasureClickHandler from '../MeasureClickHandler';
 import StickyNote from '../ui/StickyNote';
 import CurrentKeyModesStaff from './CurrentKeyModesStaff';
 import type { ViewMode } from '../../types';
@@ -168,6 +169,51 @@ export default function MusicalStaff({
             fontSize={Math.max(8, 10 * s)}
           />
         )}
+
+        {/* Click zones for audio playback */}
+        {scaleMidis.map((_, degree) => {
+          const measureX = X0 + degree * measureWidth;
+          const measureY = STAFF_TOP_Y - 20;
+          const measureHeight = STAFF_BOTTOM_Y - STAFF_TOP_Y + 80;
+
+          return (
+            <MeasureClickHandler
+              key={`click-${degree}`}
+              x={measureX}
+              y={measureY}
+              width={measureWidth}
+              height={measureHeight}
+              degree={degree}
+              currentKeyPc={currentKey.pc}
+              tonicLetterRank={tonicLetterRank}
+              tonicStartOct={tonicStartOct}
+              view={view}
+            />
+          );
+        })}
+
+        {/* Click zones for second staff in mode view */}
+        {view === 2 && scaleMidis.map((_, degree) => {
+          const measureX = X0 + degree * measureWidth;
+          const measureY = SECOND_STAFF_TOP_Y - 20;
+          const measureHeight = SECOND_STAFF_BOTTOM_Y - SECOND_STAFF_TOP_Y + 80;
+
+          return (
+            <MeasureClickHandler
+              key={`click-second-${degree}`}
+              x={measureX}
+              y={measureY}
+              width={measureWidth}
+              height={measureHeight}
+              degree={degree}
+              currentKeyPc={currentKey.pc}
+              tonicLetterRank={tonicLetterRank}
+              tonicStartOct={tonicStartOct}
+              view={view}
+              isSecondStaff={true}
+            />
+          );
+        })}
       </svg>
 
       {/* Sticky note covers */}
@@ -418,11 +464,11 @@ function ModeNotesView({
   const pad = 6 * s;
   const xLeft = X0 + degree * measureWidth + pad;
   const xRight = X0 + (degree + 1) * measureWidth - pad;
-  const stepX = (xRight - xLeft) / 7;
+  const stepX = (xRight - xLeft) / 8;
   const modeFormulaTokens = MODE_DEGREE_FORMULAS[degree].split(' ');
 
   // Octave adjustment
-  const modeAbsIndices = Array.from({ length: 7 }, (_, st) => tonicLetterRank + degree + st);
+  const modeAbsIndices = Array.from({ length: 8 }, (_, st) => tonicLetterRank + degree + st);
   const modeStaffPosMax = Math.max(
     ...modeAbsIndices.map(ai => {
       const lr = ai % 7;
@@ -434,7 +480,7 @@ function ModeNotesView({
 
   return (
     <g>
-      {Array.from({ length: 7 }, (_, step) => {
+      {Array.from({ length: 8 }, (_, step) => {
         const cx = xLeft + (step + 0.5) * stepX;
         const absIndex = tonicLetterRank + degree + step;
         const letterRank = absIndex % 7;
@@ -444,7 +490,7 @@ function ModeNotesView({
         const letter = RANK_TO_LETTER[letterRank] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
         const acc = accidentalForLetterInKey(letter, currentKeyPc);
         const accGlyph = acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
-        const tok = modeFormulaTokens[step];
+        const tok = step < 7 ? modeFormulaTokens[step] : modeFormulaTokens[0]; // La 8e note utilise le token de la première
         const isAlt = tok.includes('♭') || tok.includes('#');
         const hiColor = isAlt ? '#b91c1c' : undefined;
 
