@@ -605,13 +605,13 @@ function ModeLabels({
         {modeBase}
       </text>
 
-      {/* Mode formula - aligné avec les notes */}
-      {tokens.map((t, i) => {
+      {/* Mode formula - aligné avec les notes (8 chiffres pour 8 notes) */}
+      {[...tokens, tokens[0]].map((t, i) => {  // Ajouter la 8e note (octave de la première)
         const isAcc = t.includes('♭') || t.includes('#');
         const pad = 6 * s;
         const xLeft = X0 + degree * measureWidth + pad;
         const xRight = X0 + (degree + 1) * measureWidth - pad;
-        const stepX = (xRight - xLeft) / 7;
+        const stepX = (xRight - xLeft) / 8;  // Diviser par 8 au lieu de 7
         const tokenX = xLeft + (i + 0.5) * stepX;
 
         return (
@@ -628,6 +628,7 @@ function ModeLabels({
           </text>
         );
       })}
+
     </g>
   );
 }
