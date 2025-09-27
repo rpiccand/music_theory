@@ -168,7 +168,6 @@ const ScaleNavigator: React.FC = () => {
                 />
               </div>
             </div>
-
             {/* Circle of Fifths */}
             <div className="flex-shrink-0">
               <CircleOverlay
@@ -196,36 +195,24 @@ const ScaleNavigator: React.FC = () => {
             onViewPrev={viewNavigation.viewPrev}
           />
 
-          {/* Header Info and Circle for desktop */}
-          <div className="flex items-start gap-8">
-            <div className="flex-1">
-              <HeaderInfo
-                currentKeyPc={headerInfo.currentKey.pc}
-                headerAccStr={headerInfo.headerAccStr}
-                headerAccType={headerInfo.headerAccType}
-                headerScaleSchemaPretty={headerInfo.headerScaleSchemaPretty}
-                chordNamesINodesSmall={headerInfo.chordNamesINodesSmall}
-                headerChordSchema={headerInfo.headerChordSchema}
-                coverEnabled={state.coverEnabled}
-                hideAlter={state.hideAlter}
-                hideTetrade={state.hideTetrade}
-                hideAlterSchema={state.hideAlterSchema}
-                hideTetradeSchema={state.hideTetradeSchema}
-                onToggleAlter={() => state.setHideAlter(false)}
-                onToggleTetrade={() => state.setHideTetrade(false)}
-                onToggleAlterSchema={() => state.setHideAlterSchema(false)}
-                onToggleTetradeSchema={() => state.setHideTetradeSchema(false)}
-              />
-            </div>
-            <div className="flex-shrink-0">
-              <CircleOverlay
-                pc={headerInfo.currentKey.pc}
-                size={260}
-                top={0}
-                onSelect={handleCircleSelect}
-              />
-            </div>
-          </div>
+          {/* Header Info only for desktop */}
+          <HeaderInfo
+            currentKeyPc={headerInfo.currentKey.pc}
+            headerAccStr={headerInfo.headerAccStr}
+            headerAccType={headerInfo.headerAccType}
+            headerScaleSchemaPretty={headerInfo.headerScaleSchemaPretty}
+            chordNamesINodesSmall={headerInfo.chordNamesINodesSmall}
+            headerChordSchema={headerInfo.headerChordSchema}
+            coverEnabled={state.coverEnabled}
+            hideAlter={state.hideAlter}
+            hideTetrade={state.hideTetrade}
+            hideAlterSchema={state.hideAlterSchema}
+            hideTetradeSchema={state.hideTetradeSchema}
+            onToggleAlter={() => state.setHideAlter(false)}
+            onToggleTetrade={() => state.setHideTetrade(false)}
+            onToggleAlterSchema={() => state.setHideAlterSchema(false)}
+            onToggleTetradeSchema={() => state.setHideTetradeSchema(false)}
+          />
         </div>
       </div>
 
@@ -233,15 +220,15 @@ const ScaleNavigator: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <div ref={containerRef} className="p-4 lg:p-6 xl:p-8">
           <div className="rounded-2xl bg-white shadow p-4 lg:p-6">
-          <MusicalStaff
-            keyIndex={state.keyIndex}
-            view={state.view}
-            containerWidth={containerWidth}
-            coverEnabled={state.coverEnabled}
-            measureCoversByView={state.measureCoversByView}
-            onToggleMeasureCover={handleToggleMeasureCover}
-          />
-        </div>
+            <MusicalStaff
+              keyIndex={state.keyIndex}
+              view={state.view}
+              containerWidth={containerWidth}
+              coverEnabled={state.coverEnabled}
+              measureCoversByView={state.measureCoversByView}
+              onToggleMeasureCover={handleToggleMeasureCover}
+            />
+          </div>
         </div>
       </div>
     </div>
