@@ -1,7 +1,7 @@
 import React from 'react';
 import Piano from './Piano';
 import StickyNote from './ui/StickyNote';
-import { MUSIC_FONT, TRAIL_NBSP } from '../constants';
+import { MUSIC_FONT } from '../constants';
 import { americanKeyNameMajor } from '../utils/music';
 
 interface HeaderInfoProps {
