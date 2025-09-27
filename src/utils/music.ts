@@ -105,10 +105,10 @@ export function accidentalForLetterInKey(letter: 'A'|'B'|'C'|'D'|'E'|'F'|'G', pc
   const sig = majorKeySignatureFor(pc);
   if (sig.type === 'none' || sig.count === 0) return null;
   if (sig.type === 'sharp') {
-    const idx = SHARP_ORDER_LETTERS.indexOf(letter as typeof SHARP_ORDER_LETTERS[number]);
+    const idx = SHARP_ORDER_LETTERS.indexOf(letter as any);
     return (idx > -1 && idx < sig.count) ? 'sharp' : null;
   } else {
-    const idx = FLAT_ORDER_LETTERS.indexOf(letter as typeof FLAT_ORDER_LETTERS[number]);
+    const idx = FLAT_ORDER_LETTERS.indexOf(letter as any);
     return (idx > -1 && idx < sig.count) ? 'flat' : null;
   }
 }

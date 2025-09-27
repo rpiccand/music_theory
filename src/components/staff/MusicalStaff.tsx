@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import TrebleClef from '../TrebleClef';
-import MeasureClickHandler from '../MeasureClickHandler';
 import StickyNote from '../ui/StickyNote';
 import CurrentKeyModesStaff from './CurrentKeyModesStaff';
 import type { ViewMode } from '../../types';
@@ -37,18 +36,11 @@ export default function MusicalStaff({
   const tonicLetterRank = PC_TO_TONIC_LETTER_RANK[currentKey.pc];
   const tonicStartOct = React.useMemo(() => midiOctave(scaleMidis[0]), [scaleMidis]);
 
-  // Responsive layout calculations
-  const leftEdge = Math.max(10, Math.min(20, containerWidth * 0.02));
-  const rightMargin = leftEdge;
-  const availableWidth = containerWidth - leftEdge - rightMargin;
-  const prelimMeasure = Math.max(60, availableWidth / 7);
-
-  // Responsive scaling - better for all screen sizes
-  const baseScale = containerWidth < 768 ? 0.7 : containerWidth < 1024 ? 1.0 : containerWidth < 1440 ? 1.2 : 1.4;
-  const s = Math.max(0.6, Math.min(2, (prelimMeasure / 120) * baseScale));
-
-  // Separate scaling for second staff to ensure consistent rendering
-  const secondStaffScale = Math.max(0.8, Math.min(1.5, s));
+  // Layout calculations
+  const leftEdge = 20;
+  const rightMargin = 20;
+  const prelimMeasure = Math.max(80, (containerWidth - 40) / 7);
+  const s = Math.max(0.9, Math.min(2, prelimMeasure / 120));
 
   // Vertical metrics
   const degreeFont = 16 * s;
@@ -70,9 +62,9 @@ export default function MusicalStaff({
   const MODE_NAME_Y = ROMAN_Y + 28 * s;
   const MODE_FORMULA_Y = MODE_NAME_Y + 22 * s;
 
-  // Additional staff for modes view (current key in each mode) - better spacing
-  const SECOND_STAFF_TOP_Y = MODE_FORMULA_Y + Math.max(60, 50 * s);
-  const SECOND_STAFF_BOTTOM_Y = SECOND_STAFF_TOP_Y + 4 * (10 * secondStaffScale * 0.67);
+  // Additional staff for modes view (current key in each mode)
+  const SECOND_STAFF_TOP_Y = MODE_FORMULA_Y + 40 * s;
+  const SECOND_STAFF_BOTTOM_Y = SECOND_STAFF_TOP_Y + 4 * LINE_SPACING;
 
   // Always use the maximum possible height to prevent layout shifts
   const contentBottomY = view === 2
@@ -81,15 +73,13 @@ export default function MusicalStaff({
   const svgHeight = Math.ceil(contentBottomY + 24);
 
   return (
-    <div className="relative w-full overflow-x-auto" style={{ maxWidth: '100%' }}>
-      <div className="relative" style={{ width: Math.max(staffWidth, 400), height: svgHeight, margin: '0 auto', minWidth: 'max-content' }}>
-        <svg
-          width="100%"
-          height={svgHeight}
-          viewBox={`0 0 ${staffWidth} ${svgHeight}`}
-          preserveAspectRatio="xMidYMin meet"
-          className="block"
-        >
+    <div className="relative" style={{ width: staffWidth, height: svgHeight, margin: '0 auto' }}>
+      <svg
+        width="100%"
+        height={svgHeight}
+        viewBox={`0 0 ${staffWidth} ${svgHeight}`}
+        preserveAspectRatio="xMidYMin meet"
+      >
         {/* Staff lines */}
         {[0, 1, 2, 3, 4].map(line => (
           <line
@@ -173,57 +163,11 @@ export default function MusicalStaff({
             X0={X0}
             tonicLetterRank={tonicLetterRank}
             tonicStartOct={tonicStartOct}
-            STEP_PX={STEP_PX * (secondStaffScale / s)}
-            s={secondStaffScale}
-            LINE_SPACING={10 * secondStaffScale * 0.67}
-            fontSize={Math.max(10, 12 * secondStaffScale)}
+            STEP_PX={STEP_PX}
+            s={s}
+            fontSize={Math.max(8, 10 * s)}
           />
         )}
-
-        {/* Click zones for audio playback */}
-        {scaleMidis.map((_, degree) => {
-          const measureX = X0 + degree * measureWidth;
-          const measureY = STAFF_TOP_Y - 20;
-          const measureHeight = STAFF_BOTTOM_Y - STAFF_TOP_Y + 80;
-
-          return (
-            <MeasureClickHandler
-              key={`click-${degree}`}
-              x={measureX}
-              y={measureY}
-              width={measureWidth}
-              height={measureHeight}
-              degree={degree}
-              currentKeyPc={currentKey.pc}
-              tonicLetterRank={tonicLetterRank}
-              tonicStartOct={tonicStartOct}
-              view={view}
-            />
-          );
-        })}
-
-        {/* Click zones for second staff in mode view */}
-        {view === 2 && scaleMidis.map((_, degree) => {
-          const measureX = X0 + degree * measureWidth;
-          const measureY = SECOND_STAFF_TOP_Y - 20;
-          const measureHeight = SECOND_STAFF_BOTTOM_Y - SECOND_STAFF_TOP_Y + 80;
-
-          return (
-            <MeasureClickHandler
-              key={`click-second-${degree}`}
-              x={measureX}
-              y={measureY}
-              width={measureWidth}
-              height={measureHeight}
-              degree={degree}
-              currentKeyPc={currentKey.pc}
-              tonicLetterRank={tonicLetterRank}
-              tonicStartOct={tonicStartOct}
-              view={view}
-              isSecondStaff={true}
-            />
-          );
-        })}
       </svg>
 
       {/* Sticky note covers */}
@@ -248,7 +192,6 @@ export default function MusicalStaff({
           </div>
         );
       })}
-      </div>
     </div>
   );
 }
@@ -475,11 +418,11 @@ function ModeNotesView({
   const pad = 6 * s;
   const xLeft = X0 + degree * measureWidth + pad;
   const xRight = X0 + (degree + 1) * measureWidth - pad;
-  const stepX = (xRight - xLeft) / 8;
+  const stepX = (xRight - xLeft) / 7;
   const modeFormulaTokens = MODE_DEGREE_FORMULAS[degree].split(' ');
 
   // Octave adjustment
-  const modeAbsIndices = Array.from({ length: 8 }, (_, st) => tonicLetterRank + degree + st);
+  const modeAbsIndices = Array.from({ length: 7 }, (_, st) => tonicLetterRank + degree + st);
   const modeStaffPosMax = Math.max(
     ...modeAbsIndices.map(ai => {
       const lr = ai % 7;
@@ -491,7 +434,7 @@ function ModeNotesView({
 
   return (
     <g>
-      {Array.from({ length: 8 }, (_, step) => {
+      {Array.from({ length: 7 }, (_, step) => {
         const cx = xLeft + (step + 0.5) * stepX;
         const absIndex = tonicLetterRank + degree + step;
         const letterRank = absIndex % 7;
@@ -501,7 +444,7 @@ function ModeNotesView({
         const letter = RANK_TO_LETTER[letterRank] as 'A'|'B'|'C'|'D'|'E'|'F'|'G';
         const acc = accidentalForLetterInKey(letter, currentKeyPc);
         const accGlyph = acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
-        const tok = step < 7 ? modeFormulaTokens[step] : modeFormulaTokens[0]; // La 8e note utilise le token de la première
+        const tok = modeFormulaTokens[step];
         const isAlt = tok.includes('♭') || tok.includes('#');
         const hiColor = isAlt ? '#b91c1c' : undefined;
 
@@ -616,13 +559,13 @@ function ModeLabels({
         {modeBase}
       </text>
 
-      {/* Mode formula - aligné avec les notes (8 chiffres pour 8 notes) */}
-      {[...tokens, tokens[0]].map((t, i) => {  // Ajouter la 8e note (octave de la première)
+      {/* Mode formula - aligné avec les notes */}
+      {tokens.map((t, i) => {
         const isAcc = t.includes('♭') || t.includes('#');
         const pad = 6 * s;
         const xLeft = X0 + degree * measureWidth + pad;
         const xRight = X0 + (degree + 1) * measureWidth - pad;
-        const stepX = (xRight - xLeft) / 8;  // Diviser par 8 au lieu de 7
+        const stepX = (xRight - xLeft) / 7;
         const tokenX = xLeft + (i + 0.5) * stepX;
 
         return (
@@ -639,7 +582,6 @@ function ModeLabels({
           </text>
         );
       })}
-
     </g>
   );
 }
