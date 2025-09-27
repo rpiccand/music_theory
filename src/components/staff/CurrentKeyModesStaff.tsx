@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { LINE_SPACING } from '../../constants';
 import { MODE_STEPS, type ModeName } from '../../theory/modes';
 import {
   RANK_TO_LETTER,
@@ -23,6 +22,7 @@ export default function CurrentKeyModesStaff({
   tonicStartOct,
   STEP_PX,
   s,
+  LINE_SPACING,
   fontSize = 12,
 }: {
   staffWidth: number;
@@ -35,6 +35,7 @@ export default function CurrentKeyModesStaff({
   tonicStartOct: number;    // octave de départ
   STEP_PX: number;          // pixels par demi-ton vertical
   s: number;                // facteur d'échelle
+  LINE_SPACING: number;     // espacement entre les lignes de la portée
   fontSize?: number;
 }) {
   const yBottom = yTop + 4 * LINE_SPACING;
@@ -82,7 +83,7 @@ export default function CurrentKeyModesStaff({
         const pad = 6 * s; // Même padding que ModeNotesView
         const xLeft = X0 + modeIdx * measureWidth + pad;
         const xRight = X0 + (modeIdx + 1) * measureWidth - pad;
-        const stepX = (xRight - xLeft) / 7;
+        const stepX = (xRight - xLeft) / 8;
 
 
         // Noms des modes en français
@@ -102,7 +103,7 @@ export default function CurrentKeyModesStaff({
         return (
           <g key={`current-mode-${mode}`}>
             {/* Notes du mode */}
-            {Array.from({ length: 7 }).map((_, step) => {
+            {Array.from({ length: 8 }).map((_, step) => {
               // Position comme la première portée : partir de la tonique + step (pas du mode)
               const cx = xLeft + (step + 0.5) * stepX;
               const absIndex = tonicLetterRank + step; // Partir de la tonique, pas du mode
@@ -116,7 +117,9 @@ export default function CurrentKeyModesStaff({
 
 
               // Note correspondante dans ce mode spécifique
-              const modeNotePc = (currentKeyPc + modeSteps[step]) % 12;
+              // Pour la 8e note (step === 7), utiliser la même que la première (step 0)
+              const modeStepIndex = step >= 7 ? 0 : step;
+              const modeNotePc = (currentKeyPc + modeSteps[modeStepIndex]) % 12;
 
               // Trouver la meilleure représentation enharmonique pour ce pitch class
               const targetPc = modeNotePc;
@@ -187,9 +190,12 @@ export default function CurrentKeyModesStaff({
                   score += 5; // Altération différente de la tonalité
                 }
 
-                // Préférer la note d'origine si possible
-                if (noteLetterRank !== letterRank) {
-                  score += 2; // Léger malus pour changer de lettre
+                // Préférer les notes qui suivent l'ordre diatonique
+                const expectedLetterRank = (tonicLetterRank + step) % 7;
+                if (noteLetterRank === expectedLetterRank) {
+                  score -= 5; // Gros bonus pour respecter l'ordre diatonique
+                } else {
+                  score += 10; // Gros malus pour ne pas respecter l'ordre diatonique
                 }
 
                 if (score < bestScore) {
@@ -207,7 +213,10 @@ export default function CurrentKeyModesStaff({
                 finalLetterRank = bestOption.letterRank;
                 finalOct = bestOption.oct;
                 accGlyph = bestOption.acc;
-                isAlteredByMode = (bestOption.letterRank !== letterRank) || (bestOption.acc !== baseAccGlyph);
+                // Une note est altérée par le mode seulement si elle diffère de la tonalité de base
+                // En ionien, aucune note ne devrait être rouge car c'est la tonalité de base
+                const isIonianMode = mode === 'ionian';
+                isAlteredByMode = !isIonianMode && ((bestOption.letterRank !== letterRank) || (bestOption.acc !== baseAccGlyph));
               }
 
               // Recalculer la position sur la portée avec la lettre finale
@@ -227,7 +236,7 @@ export default function CurrentKeyModesStaff({
                         accGlyph.includes('♯♯') || accGlyph.includes('♭♭') ? cx - 18 * s : // Doubles altérations plus à gauche
                         accGlyph === '♯' ? cx - 9 * s : cx - 14 * s // Même position que première portée en vue modes
                       }
-                      y={staffPosToY(finalStaffPos, yTop + 4 * LINE_SPACING, STEP_PX * 0.85)}
+                      y={staffPosToY(finalStaffPos, yTop + 4 * LINE_SPACING, STEP_PX)}
                       fontSize={13 * s} // Même taille que première portée
                       fontFamily={MUSIC_FONT}
                       dominantBaseline="middle"
@@ -242,7 +251,7 @@ export default function CurrentKeyModesStaff({
                     finalStaffPos,
                     s * 0.5, // Même taille que première portée en vue modes
                     yTop + 4 * LINE_SPACING,
-                    STEP_PX * 0.85, // Espacement vertical plus serré
+                    STEP_PX, // Même espacement que la première portée
                     isAlteredByMode ? '#b91c1c' : '#374151' // Même rouge que première portée
                   )}
                 </motion.g>

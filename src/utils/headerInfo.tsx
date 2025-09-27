@@ -56,7 +56,7 @@ export function useHeaderInfo(keyIndex: number) {
       RANK_TO_LETTER[(tonicLetterRank + d) % 7] as 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
     );
     const marks = letters.map(letter => (accidentalForLetterInKey(letter, currentKey.pc) ? "'" : ","));
-    return marks.join('\u00A0');
+    return marks.join('\u00A0') + '\u00A0\u00A0\u00A0\u00A0';
   })();
 
   // Chord schema (white/black key pattern)

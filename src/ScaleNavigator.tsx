@@ -124,54 +124,111 @@ const ScaleNavigator: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-neutral-50 text-neutral-900 p-6 relative" style={{ fontFamily: '"Caveat", cursive', scrollBehavior: 'auto' }}>
-      <NavigationControls
-        navMode={state.navMode}
-        coverEnabled={state.coverEnabled}
-        currentView={state.view}
-        onNavModeChange={state.setNavMode}
-        onCoverEnabledChange={handleCoverEnabledChange}
-        onGoRight={keyNavigation.goRight}
-        onGoLeft={keyNavigation.goLeft}
-        onViewNext={viewNavigation.viewNext}
-        onViewPrev={viewNavigation.viewPrev}
-      />
+    <div className="w-full min-h-screen bg-neutral-50 text-neutral-900 relative overflow-x-auto" style={{ fontFamily: '"Caveat", cursive' }}>
+      {/* Top Controls Bar */}
+      <div className="bg-white border-b border-neutral-200 p-4 lg:p-6">
+        {/* Mobile/Tablet Layout (current refactored version) */}
+        <div className="xl:hidden">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 items-start lg:items-start">
+            {/* Left section: Navigation and Header side by side */}
+            <div className="flex-1 flex flex-row gap-4 lg:gap-8 items-start">
+              {/* Navigation Controls */}
+              <div className="flex-shrink-0">
+                <NavigationControls
+                  navMode={state.navMode}
+                  coverEnabled={state.coverEnabled}
+                  currentView={state.view}
+                  onNavModeChange={state.setNavMode}
+                  onCoverEnabledChange={handleCoverEnabledChange}
+                  onGoRight={keyNavigation.goRight}
+                  onGoLeft={keyNavigation.goLeft}
+                  onViewNext={viewNavigation.viewNext}
+                  onViewPrev={viewNavigation.viewPrev}
+                />
+              </div>
 
-      <div ref={containerRef}>
-        <HeaderInfo
-          currentKeyPc={headerInfo.currentKey.pc}
-          headerAccStr={headerInfo.headerAccStr}
-          headerAccType={headerInfo.headerAccType}
-          headerScaleSchemaPretty={headerInfo.headerScaleSchemaPretty}
-          chordNamesINodesSmall={headerInfo.chordNamesINodesSmall}
-          headerChordSchema={headerInfo.headerChordSchema}
-          coverEnabled={state.coverEnabled}
-          hideAlter={state.hideAlter}
-          hideTetrade={state.hideTetrade}
-          hideAlterSchema={state.hideAlterSchema}
-          hideTetradeSchema={state.hideTetradeSchema}
-          onToggleAlter={() => state.setHideAlter(false)}
-          onToggleTetrade={() => state.setHideTetrade(false)}
-          onToggleAlterSchema={() => state.setHideAlterSchema(false)}
-          onToggleTetradeSchema={() => state.setHideTetradeSchema(false)}
-        />
+              {/* Header Info */}
+              <div className="flex-1 min-w-0">
+                <HeaderInfo
+                  currentKeyPc={headerInfo.currentKey.pc}
+                  headerAccStr={headerInfo.headerAccStr}
+                  headerAccType={headerInfo.headerAccType}
+                  headerScaleSchemaPretty={headerInfo.headerScaleSchemaPretty}
+                  chordNamesINodesSmall={headerInfo.chordNamesINodesSmall}
+                  headerChordSchema={headerInfo.headerChordSchema}
+                  coverEnabled={state.coverEnabled}
+                  hideAlter={state.hideAlter}
+                  hideTetrade={state.hideTetrade}
+                  hideAlterSchema={state.hideAlterSchema}
+                  hideTetradeSchema={state.hideTetradeSchema}
+                  onToggleAlter={() => state.setHideAlter(false)}
+                  onToggleTetrade={() => state.setHideTetrade(false)}
+                  onToggleAlterSchema={() => state.setHideAlterSchema(false)}
+                  onToggleTetradeSchema={() => state.setHideTetradeSchema(false)}
+                />
+              </div>
+            </div>
+            {/* Circle of Fifths */}
+            <div className="flex-shrink-0">
+              <CircleOverlay
+                pc={headerInfo.currentKey.pc}
+                size={containerWidth < 768 ? 140 : containerWidth < 1024 ? 180 : 200}
+                top={0}
+                onSelect={handleCircleSelect}
+              />
+            </div>
+          </div>
+        </div>
 
-        <div className="rounded-2xl bg-white shadow p-4" style={{ minHeight: '500px' }}>
-          <CircleOverlay
-            pc={headerInfo.currentKey.pc}
-            size={260}
-            top={16}
-            onSelect={handleCircleSelect}
-          />
-
-          <MusicalStaff
-            keyIndex={state.keyIndex}
-            view={state.view}
-            containerWidth={containerWidth}
+        {/* Desktop/Laptop Layout (original version before refactoring) */}
+        <div className="hidden xl:flex flex-col gap-4">
+          {/* Navigation Controls */}
+          <NavigationControls
+            navMode={state.navMode}
             coverEnabled={state.coverEnabled}
-            measureCoversByView={state.measureCoversByView}
-            onToggleMeasureCover={handleToggleMeasureCover}
+            currentView={state.view}
+            onNavModeChange={state.setNavMode}
+            onCoverEnabledChange={handleCoverEnabledChange}
+            onGoRight={keyNavigation.goRight}
+            onGoLeft={keyNavigation.goLeft}
+            onViewNext={viewNavigation.viewNext}
+            onViewPrev={viewNavigation.viewPrev}
           />
+
+          {/* Header Info only for desktop */}
+          <HeaderInfo
+            currentKeyPc={headerInfo.currentKey.pc}
+            headerAccStr={headerInfo.headerAccStr}
+            headerAccType={headerInfo.headerAccType}
+            headerScaleSchemaPretty={headerInfo.headerScaleSchemaPretty}
+            chordNamesINodesSmall={headerInfo.chordNamesINodesSmall}
+            headerChordSchema={headerInfo.headerChordSchema}
+            coverEnabled={state.coverEnabled}
+            hideAlter={state.hideAlter}
+            hideTetrade={state.hideTetrade}
+            hideAlterSchema={state.hideAlterSchema}
+            hideTetradeSchema={state.hideTetradeSchema}
+            onToggleAlter={() => state.setHideAlter(false)}
+            onToggleTetrade={() => state.setHideTetrade(false)}
+            onToggleAlterSchema={() => state.setHideAlterSchema(false)}
+            onToggleTetradeSchema={() => state.setHideTetradeSchema(false)}
+          />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div ref={containerRef} className="p-4 lg:p-6 xl:p-8">
+          <div className="rounded-2xl bg-white shadow p-4 lg:p-6">
+            <MusicalStaff
+              keyIndex={state.keyIndex}
+              view={state.view}
+              containerWidth={containerWidth}
+              coverEnabled={state.coverEnabled}
+              measureCoversByView={state.measureCoversByView}
+              onToggleMeasureCover={handleToggleMeasureCover}
+            />
+          </div>
         </div>
       </div>
     </div>
