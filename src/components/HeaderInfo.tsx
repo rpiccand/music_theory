@@ -1,7 +1,7 @@
 import React from 'react';
 import Piano from './Piano';
 import StickyNote from './ui/StickyNote';
-import { MUSIC_FONT, TRAIL_NBSP, PIANO_WIDTH } from '../constants';
+import { MUSIC_FONT, TRAIL_NBSP } from '../constants';
 import { americanKeyNameMajor } from '../utils/music';
 
 interface HeaderInfoProps {
@@ -43,72 +43,28 @@ export default function HeaderInfo({
   const displayKeyName = keyName.length ? keyName[0].toUpperCase() + keyName.slice(1) : keyName;
 
   return (
-    <header className="mb-72 flex items-start justify-center">
-      <div
-        className="text-center"
-        style={{
-          fontVariantNumeric: 'tabular-nums',
-          width: '100%',
-          maxWidth: '100%',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          className="inline-grid"
-          style={{
-            gridTemplateColumns: '26ch 2ch 6ch minmax(0, 2fr) 8ch minmax(0, 40ch)',
-            gridTemplateRows: '4.5rem 4.5rem 4.5rem',
-            alignItems: 'center',
-            columnGap: '1ch',
-            rowGap: '0.35rem',
-          }}
-        >
+    <div className="p-2 w-full">
+      {/* Mobile/Tablet Layout (current refactored version) */}
+      <div className="xl:hidden">
+        <div className="grid grid-cols-[auto_auto_auto_auto] gap-y-2 items-center w-full" style={{columnGap: '5ch'}}>
           {/* Tonalité */}
-          <div className="justify-self-end font-bold leading-tight" style={{ fontSize: '3rem' }}>
-            Tonalité
-          </div>
-          <div className="font-bold leading-tight" style={{ fontSize: '3rem' }}>:</div>
-          <div />
-          <div
-            className="justify-self-start text-left font-bold leading-tight"
-            style={{
-              fontSize: '4rem',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              gridColumn: '4 / 7',
-              position: 'relative',
-              paddingRight: `${PIANO_WIDTH + 16}px`
-            }}
-          >
-            {displayKeyName}{TRAIL_NBSP}
-            <div style={{
-              position: 'absolute',
-              right: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: PIANO_WIDTH
-            }}>
+          <div className="text-neutral-700 text-sm font-medium">Tonalité:</div>
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold text-neutral-900">{displayKeyName}</span>
+            <div className="transform scale-50">
               <Piano highlightedPc={currentKeyPc} />
             </div>
           </div>
+          <div></div> {/* Espacement */}
+          <div></div> {/* Espacement */}
 
           {/* Altérations */}
-          <div className="justify-self-end text-neutral-800 mt-1 tracking-wide" style={{ fontSize: '3rem' }}>
-            Altérations
-          </div>
-          <div className="text-neutral-800 mt-1 tracking-wide" style={{ fontSize: '3rem' }}>:</div>
-          <div />
-          <div className="justify-self-start text-left text-neutral-800 tracking-wide relative" style={{
-            fontSize: '3rem',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            textOverflow: 'ellipsis'
-          }}>
+          <div className="text-neutral-700 text-sm font-medium">Altérations:</div>
+          <div className="text-sm text-neutral-800 relative">
             {headerAccType === 'none' ? '—' : (
               <>
                 <span>{headerAccStr}</span>
-                <span style={{ fontFamily: MUSIC_FONT, fontSize: '2rem' }}>
+                <span className="text-xs" style={{ fontFamily: MUSIC_FONT }}>
                   {headerAccType === 'sharp' ? '♯' : '♭'}
                 </span>
               </>
@@ -117,16 +73,8 @@ export default function HeaderInfo({
               <StickyNote onClick={onToggleAlter} />
             )}
           </div>
-          <div />
-          <div
-            className="justify-self-start text-left text-neutral-800 mt-1 tracking-wide relative"
-            style={{
-              fontSize: '3rem',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              display: 'inline-block'
-            }}
-          >
+          <div></div> {/* Espacement */}
+          <div className="text-sm text-neutral-800 relative">
             {headerScaleSchemaPretty}
             {coverEnabled && hideAlterSchema && (
               <StickyNote onClick={onToggleAlterSchema} />
@@ -134,34 +82,15 @@ export default function HeaderInfo({
           </div>
 
           {/* Tétrade */}
-          <div className="justify-self-end text-neutral-800 tracking-wide" style={{ fontSize: '3rem' }}>
-            Tétrade
-          </div>
-          <div className="text-neutral-800 tracking-wide" style={{ fontSize: '3rem' }}>:</div>
-          <div />
-          <div className="justify-self-start text-left text-neutral-800 tracking-wide relative" style={{
-            fontSize: '3rem',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
+          <div className="text-neutral-700 text-sm font-medium">Tétrade:</div>
+          <div className="text-sm text-neutral-800 relative">
             {chordNamesINodesSmall}
-            <span>{TRAIL_NBSP}</span>
             {coverEnabled && hideTetrade && (
               <StickyNote onClick={onToggleTetrade} />
             )}
           </div>
-          <div />
-          <div
-            className="justify-self-start text-left text-neutral-800 tracking-wide relative"
-            style={{
-              fontSize: '3rem',
-              whiteSpace: 'nowrap',
-              minWidth: '12ch',
-              overflow: 'hidden',
-              minHeight: '4.5rem'
-            }}
-          >
+          <div></div> {/* Espacement */}
+          <div className="text-sm text-neutral-800 relative">
             {headerChordSchema}
             {coverEnabled && hideTetradeSchema && (
               <StickyNote onClick={onToggleTetradeSchema} />
@@ -169,6 +98,63 @@ export default function HeaderInfo({
           </div>
         </div>
       </div>
-    </header>
+
+      {/* Desktop/Laptop Layout (original version before refactoring) */}
+      <div className="hidden xl:block">
+        <div className="bg-gray-50 p-4 rounded border">
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 items-center">
+            {/* Tonalité */}
+            <div className="text-neutral-700 text-sm font-medium">Tonalité:</div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-neutral-900">{displayKeyName}</span>
+              <div className="transform scale-75">
+                <Piano highlightedPc={currentKeyPc} />
+              </div>
+            </div>
+
+            {/* Altérations */}
+            <div className="text-neutral-700 text-sm font-medium">Altérations:</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-neutral-800 relative">
+                {headerAccType === 'none' ? '—' : (
+                  <>
+                    <span>{headerAccStr}</span>
+                    <span className="text-xs" style={{ fontFamily: MUSIC_FONT }}>
+                      {headerAccType === 'sharp' ? '♯' : '♭'}
+                    </span>
+                  </>
+                )}
+                {coverEnabled && hideAlter && (
+                  <StickyNote onClick={onToggleAlter} />
+                )}
+              </div>
+              <div className="text-sm text-neutral-800 relative">
+                {headerScaleSchemaPretty}
+                {coverEnabled && hideAlterSchema && (
+                  <StickyNote onClick={onToggleAlterSchema} />
+                )}
+              </div>
+            </div>
+
+            {/* Tétrade */}
+            <div className="text-neutral-700 text-sm font-medium">Tétrade:</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-neutral-800 relative">
+                {chordNamesINodesSmall}
+                {coverEnabled && hideTetrade && (
+                  <StickyNote onClick={onToggleTetrade} />
+                )}
+              </div>
+              <div className="text-sm text-neutral-800 relative">
+                {headerChordSchema}
+                {coverEnabled && hideTetradeSchema && (
+                  <StickyNote onClick={onToggleTetradeSchema} />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

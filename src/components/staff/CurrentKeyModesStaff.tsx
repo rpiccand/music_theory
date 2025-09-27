@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { LINE_SPACING } from '../../constants';
 import { MODE_STEPS, type ModeName } from '../../theory/modes';
 import {
   RANK_TO_LETTER,
@@ -23,6 +22,7 @@ export default function CurrentKeyModesStaff({
   tonicStartOct,
   STEP_PX,
   s,
+  LINE_SPACING,
   fontSize = 12,
 }: {
   staffWidth: number;
@@ -35,6 +35,7 @@ export default function CurrentKeyModesStaff({
   tonicStartOct: number;    // octave de départ
   STEP_PX: number;          // pixels par demi-ton vertical
   s: number;                // facteur d'échelle
+  LINE_SPACING: number;     // espacement entre les lignes de la portée
   fontSize?: number;
 }) {
   const yBottom = yTop + 4 * LINE_SPACING;
@@ -235,7 +236,7 @@ export default function CurrentKeyModesStaff({
                         accGlyph.includes('♯♯') || accGlyph.includes('♭♭') ? cx - 18 * s : // Doubles altérations plus à gauche
                         accGlyph === '♯' ? cx - 9 * s : cx - 14 * s // Même position que première portée en vue modes
                       }
-                      y={staffPosToY(finalStaffPos, yTop + 4 * LINE_SPACING, STEP_PX * 0.85)}
+                      y={staffPosToY(finalStaffPos, yTop + 4 * LINE_SPACING, STEP_PX)}
                       fontSize={13 * s} // Même taille que première portée
                       fontFamily={MUSIC_FONT}
                       dominantBaseline="middle"
@@ -250,7 +251,7 @@ export default function CurrentKeyModesStaff({
                     finalStaffPos,
                     s * 0.5, // Même taille que première portée en vue modes
                     yTop + 4 * LINE_SPACING,
-                    STEP_PX * 0.85, // Espacement vertical plus serré
+                    STEP_PX, // Même espacement que la première portée
                     isAlteredByMode ? '#b91c1c' : '#374151' // Même rouge que première portée
                   )}
                 </motion.g>

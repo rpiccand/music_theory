@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { audioSynth } from '../utils/audio';
 import type { ViewMode } from '../types';
 import { MODE_STEPS, type ModeName } from '../theory/modes';
@@ -61,7 +61,7 @@ export default function MeasureClickHandler({
   // Calculer les pitch classes et octaves selon la vue (exactement comme affiché visuellement)
   const getPitchClassesAndOctaves = (): { pcs: number[]; octaves: number[] } => {
     switch (view) {
-      case 0: // Vue diatonique - une seule note
+      case 0: { // Vue diatonique - une seule note
         const absIndex = tonicLetterRank + degree;
         const letterRank = absIndex % 7;
         const oct = tonicStartOct + Math.floor(absIndex / 7);
@@ -69,8 +69,8 @@ export default function MeasureClickHandler({
         const acc = accidentalForLetterInKey(letter, currentKeyPc);
         const pc = letterAndAccidentalToPc(letterRank, acc);
         return { pcs: [pc], octaves: [oct] };
-
-      case 1: // Vue tétrade - accord de 7e (exactement comme affiché)
+      }
+      case 1: { // Vue tétrade - accord de 7e (exactement comme affiché)
         // Calculer chordOctAdj exactement comme dans la logique visuelle
         const chordAbsIndices = [0, 2, 4, 6].map(offset => tonicLetterRank + degree + offset);
         const chordStaffPosMax = Math.max(
@@ -95,8 +95,8 @@ export default function MeasureClickHandler({
           pcs: chordData.map(d => d.pc),
           octaves: chordData.map(d => d.oct)
         };
-
-      case 2: // Vue modes - séquence de gamme (7 notes + octave)
+      }
+      case 2: { // Vue modes - séquence de gamme (7 notes + octave)
         if (isSecondStaff) {
           // Pour la deuxième portée, jouer les notes du mode correspondant au degré
           const modeSteps = getModeSteps(degree);
@@ -177,7 +177,7 @@ export default function MeasureClickHandler({
             octaves: modeData.map(d => d.oct)
           };
         }
-
+      }
       default:
         return { pcs: [], octaves: [] };
     }

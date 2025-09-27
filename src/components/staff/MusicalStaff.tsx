@@ -37,11 +37,18 @@ export default function MusicalStaff({
   const tonicLetterRank = PC_TO_TONIC_LETTER_RANK[currentKey.pc];
   const tonicStartOct = React.useMemo(() => midiOctave(scaleMidis[0]), [scaleMidis]);
 
-  // Layout calculations
-  const leftEdge = 20;
-  const rightMargin = 20;
-  const prelimMeasure = Math.max(80, (containerWidth - 40) / 7);
-  const s = Math.max(0.9, Math.min(2, prelimMeasure / 120));
+  // Responsive layout calculations
+  const leftEdge = Math.max(10, Math.min(20, containerWidth * 0.02));
+  const rightMargin = leftEdge;
+  const availableWidth = containerWidth - leftEdge - rightMargin;
+  const prelimMeasure = Math.max(60, availableWidth / 7);
+
+  // Responsive scaling - better for all screen sizes
+  const baseScale = containerWidth < 768 ? 0.7 : containerWidth < 1024 ? 1.0 : containerWidth < 1440 ? 1.2 : 1.4;
+  const s = Math.max(0.6, Math.min(2, (prelimMeasure / 120) * baseScale));
+
+  // Separate scaling for second staff to ensure consistent rendering
+  const secondStaffScale = Math.max(0.8, Math.min(1.5, s));
 
   // Vertical metrics
   const degreeFont = 16 * s;
@@ -63,9 +70,9 @@ export default function MusicalStaff({
   const MODE_NAME_Y = ROMAN_Y + 28 * s;
   const MODE_FORMULA_Y = MODE_NAME_Y + 22 * s;
 
-  // Additional staff for modes view (current key in each mode)
-  const SECOND_STAFF_TOP_Y = MODE_FORMULA_Y + 40 * s;
-  const SECOND_STAFF_BOTTOM_Y = SECOND_STAFF_TOP_Y + 4 * LINE_SPACING;
+  // Additional staff for modes view (current key in each mode) - better spacing
+  const SECOND_STAFF_TOP_Y = MODE_FORMULA_Y + Math.max(60, 50 * s);
+  const SECOND_STAFF_BOTTOM_Y = SECOND_STAFF_TOP_Y + 4 * (10 * secondStaffScale * 0.67);
 
   // Always use the maximum possible height to prevent layout shifts
   const contentBottomY = view === 2
@@ -74,13 +81,15 @@ export default function MusicalStaff({
   const svgHeight = Math.ceil(contentBottomY + 24);
 
   return (
-    <div className="relative" style={{ width: staffWidth, height: svgHeight, margin: '0 auto' }}>
-      <svg
-        width="100%"
-        height={svgHeight}
-        viewBox={`0 0 ${staffWidth} ${svgHeight}`}
-        preserveAspectRatio="xMidYMin meet"
-      >
+    <div className="relative w-full overflow-x-auto" style={{ maxWidth: '100%' }}>
+      <div className="relative" style={{ width: Math.max(staffWidth, 400), height: svgHeight, margin: '0 auto', minWidth: 'max-content' }}>
+        <svg
+          width="100%"
+          height={svgHeight}
+          viewBox={`0 0 ${staffWidth} ${svgHeight}`}
+          preserveAspectRatio="xMidYMin meet"
+          className="block"
+        >
         {/* Staff lines */}
         {[0, 1, 2, 3, 4].map(line => (
           <line
@@ -164,9 +173,10 @@ export default function MusicalStaff({
             X0={X0}
             tonicLetterRank={tonicLetterRank}
             tonicStartOct={tonicStartOct}
-            STEP_PX={STEP_PX}
-            s={s}
-            fontSize={Math.max(8, 10 * s)}
+            STEP_PX={STEP_PX * (secondStaffScale / s)}
+            s={secondStaffScale}
+            LINE_SPACING={10 * secondStaffScale * 0.67}
+            fontSize={Math.max(10, 12 * secondStaffScale)}
           />
         )}
 
@@ -238,6 +248,7 @@ export default function MusicalStaff({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
